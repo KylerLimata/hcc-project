@@ -5,7 +5,7 @@ class DummyAgent:
         pass
 
     def eval_step(self, f: float):
-        return [50.0, 0.785]
+        return [100.0, 0.0]
 
 sim.load_environment("TestEnvironment")
 sim.evaluate_agent(DummyAgent())

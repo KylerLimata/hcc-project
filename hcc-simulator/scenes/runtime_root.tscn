@@ -33,6 +33,9 @@ script = ExtResource("1_nixts")
 layout_mode = 2
 text = "Run"
 
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 0, 0)
+
 [connection signal="evaluate_agent" from="PythonScriptRunner" to="." method="evaluate_agent"]
 [connection signal="load_environment" from="PythonScriptRunner" to="." method="load_environment"]
 [connection signal="output" from="MarginContainer/VBoxContainer/ScriptNameInput" to="." method="_on_script_name_input_output"]

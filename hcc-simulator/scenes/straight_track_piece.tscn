@@ -1,0 +1,65 @@
+[gd_scene load_steps=10 format=3 uid="uid://d2twlygj6e7gr"]
+
+[ext_resource type="Script" uid="uid://cop8im4p831b" path="res://scripts/straight_track_piece.gd" id="1_eb81t"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yodu8"]
+albedo_color = Color(0.43, 0.43, 0.43, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_eb81t"]
+size = Vector3(15, 0.25, 3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_eb81t"]
+size = Vector3(15, 0.25, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iml1p"]
+albedo_color = Color(0, 0.7999997, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_yodu8"]
+size = Vector3(15, 1, 0.25)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_yodu8"]
+size = Vector3(15, 1, 0.25)
+
+[sub_resource type="BoxMesh" id="BoxMesh_iml1p"]
+size = Vector3(15, 1, 0.25)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_iml1p"]
+size = Vector3(15, 1, 0.25)
+
+[node name="StraightTrackPiece" type="Node3D"]
+script = ExtResource("1_eb81t")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+collision_mask = 3
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.125, 0)
+material_override = SubResource("StandardMaterial3D_yodu8")
+mesh = SubResource("BoxMesh_eb81t")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.125, 0)
+shape = SubResource("BoxShape3D_eb81t")
+
+[node name="Left Wall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, -1.375)
+collision_mask = 3
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Left Wall"]
+material_override = SubResource("StandardMaterial3D_iml1p")
+mesh = SubResource("BoxMesh_yodu8")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Left Wall"]
+shape = SubResource("BoxShape3D_yodu8")
+
+[node name="Right Wall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 1.375)
+collision_mask = 3
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Right Wall"]
+material_override = SubResource("StandardMaterial3D_iml1p")
+mesh = SubResource("BoxMesh_iml1p")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Right Wall"]
+shape = SubResource("BoxShape3D_iml1p")
