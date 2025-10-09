@@ -4,7 +4,7 @@ use std::fs;
 use std::ops::Deref;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use godot::classes::{IVehicleBody3D, VehicleBody3D};
+use godot::classes::{IVehicleBody3D, PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D, VehicleBody3D, World3D};
 use godot::prelude::*;
 use pyo3::ffi::c_str;
 use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyErr, PyResult, Python};
@@ -100,6 +100,7 @@ impl PythonScriptRunner {
 struct AgentVehicleBody {
     agent: Option<Gd<PythonAgent>>,
     base: Base<VehicleBody3D>,
+    distances: Vec<f64>
 }
 
 #[godot_api]
@@ -108,13 +109,18 @@ impl IVehicleBody3D for AgentVehicleBody {
         Self {
             agent: None,
             base,
+            distances: vec![]
         }
     }
 
     fn physics_process(&mut self, delta: f64) {
+
+
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
-                let args = PyTuple::new(py, [vec![1.0]]).unwrap();
+
+                let distances = if self.distances.is_empty() { vec![5.0, 5.0, 5.0] } else { self.distances.clone() };
+                let args = PyTuple::new(py, [distances]).unwrap();
                 let pyclass = agent.bind_mut();
 
                 pyclass.agent.call_method1(py, "eval_step", args).unwrap().extract(py).unwrap()
@@ -131,6 +137,11 @@ impl AgentVehicleBody {
     #[func]
     fn attach_agent(&mut self, agent: Gd<PythonAgent>) {
         self.agent = Some(agent);
+    }
+
+    #[func]
+    fn update_raycast_distances(&mut self, distances    : Array<f64>) {
+        self.distances = distances.iter_shared().collect();
     }
 }
 

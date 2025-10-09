@@ -4,7 +4,7 @@ class DummyAgent:
     def __init__(self):
         pass
 
-    def eval_step(self, f: float):
+    def eval_step(self, distances: list[float]):
         return [100.0, 0.0]
 
 sim.load_environment("TestEnvironment")
