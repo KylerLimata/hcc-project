@@ -1,3 +1,5 @@
+mod messaging;
+
 use std::ffi::CString;
 use std::fmt::format;
 use std::fs;
