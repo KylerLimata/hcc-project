@@ -1,15 +1,12 @@
 mod messaging;
 
 use std::ffi::CString;
-use std::fmt::format;
 use std::fs;
-use std::ops::Deref;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use godot::classes::{IVehicleBody3D, PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D, VehicleBody3D, World3D};
+use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
-use pyo3::ffi::c_str;
-use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyErr, PyResult, Python};
+use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
 
 struct HCCPythonRunnerExtension;
@@ -21,6 +18,7 @@ unsafe impl ExtensionLibrary for HCCPythonRunnerExtension {}
 #[class(base=Node)]
 struct PythonScriptRunner {
     print_receiver: Option<Receiver<Message>>,
+    agent_return_sender: Option<Sender<Py<PyAny>>>,
     base: Base<Node>
 }
 
@@ -29,6 +27,7 @@ impl INode for PythonScriptRunner {
     fn init(base: Base<Node>) -> Self {
         Self {
             print_receiver: None,
+            agent_return_sender: None,
             base
         }
     }
@@ -47,6 +46,11 @@ impl INode for PythonScriptRunner {
                     Message::LoadEnvironment(ref name) => {
                         godot_print!("Loading environment...");
                         self.signals().load_environment().emit(&GString::from(name));
+                    }
+                    Message::RunEpisode(agent, max_steps, return_sender) => {
+                        let wrapped = PythonAgent::new(agent);
+                        self.signals().evaluate_agent().emit(&wrapped);
+                        self.agent_return_sender = Some(return_sender);
                     }
                 }
             }
@@ -88,6 +92,14 @@ impl PythonScriptRunner {
                 godot_error!("Error running python script: {:?}", err);
             }
         }
+    }
+
+    #[func]
+    fn return_agent(&mut self, mut python_agent: Gd<PythonAgent>) {
+        let bound = python_agent.bind_mut();
+        let cloned = Python::attach(|py| bound.agent.clone_ref(py));
+
+        self.agent_return_sender.as_mut().unwrap().send(cloned).unwrap();
     }
 
     #[signal]
@@ -196,11 +208,25 @@ impl SimulationRunner {
             Err(_) => Err(pyo3::exceptions::PyOSError::new_err("Failed to register agent"))
         }
     }
+
+    fn run_episode(&mut self, py: Python, instance: &Bound<'_, PyAny>, max_steps: i64) -> PyResult<Py<PyAny>> {
+        let (tx, rx): (Sender<Py<PyAny>>, Receiver<Py<PyAny>>) = mpsc::channel();
+        match self.message_sender.send(Message::RunEpisode(instance.clone().unbind(), max_steps, tx)) {
+            Ok(_) => (),
+            Err(err) => return Err(pyo3::exceptions::PyOSError::new_err(err.to_string()))
+        };
+
+        match rx.recv() {
+            Ok(agent) => Ok(agent),
+            Err(_) => Err(pyo3::exceptions::PyOSError::new_err("Channel closed!"))
+        }
+    }
 }
 
 enum Message {
     Print(String),
     LoadEnvironment(String),
     EvaluateAgent(Py<PyAny>),
+    RunEpisode(Py<PyAny>, i64, Sender<Py<PyAny>>),
 }
 
