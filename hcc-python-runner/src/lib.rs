@@ -1,12 +1,13 @@
 mod messaging;
 
 use std::ffi::CString;
-use std::fs;
+use std::{fs, thread};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
 use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
+use pyo3::prelude::PyAnyMethods;
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
 
 struct HCCPythonRunnerExtension;
@@ -132,8 +133,6 @@ impl IVehicleBody3D for AgentVehicleBody {
     }
 
     fn physics_process(&mut self, delta: f64) {
-
-
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
 
@@ -220,10 +219,35 @@ impl SimulationRunner {
             Err(err) => return Err(pyo3::exceptions::PyOSError::new_err(err.to_string()))
         };
 
-        match rx.recv() {
-            Ok(agent) => Ok(agent),
-            Err(_) => Err(pyo3::exceptions::PyOSError::new_err("Channel closed!"))
-        }
+        // Create an asyncio Future and return it immediately.
+        // The thread we spawn below will block on rx.recv() and call future.set_result(...)
+        let asyncio = py.import("asyncio")?;
+        let loop_obj = asyncio.call_method0("get_event_loop")?;
+        let future_any = loop_obj.call_method0("create_future")?; // a &PyAny
+        let future_py: Py<PyAny> = future_any.into(); // owned handle (Py<PyAny>)
+
+        // clone_ref to safely use it under the GIL later
+        let future_ref = future_py.clone_ref(py);
+
+        // spawn worker thread that blocks on rx
+        thread::spawn(move || {
+            match rx.recv() {
+                Ok(bar_py) => {
+                    // acquire GIL and set the Future result
+                    Python::attach(|py| {
+                        let _ = future_ref.call_method1(py, "set_result", (bar_py.as_ref(),));
+                    });
+                }
+                Err(_) => {
+                    Python::attach(|py| {
+                        let exc = pyo3::exceptions::PyRuntimeError::new_err("channel closed");
+                        let _ = future_ref.call_method1(py, "set_exception", (exc,));
+                    });
+                }
+            }
+        });
+
+        Ok(future_py)
     }
 }
 
