@@ -1,5 +1,3 @@
-mod messaging;
-
 use std::ffi::CString;
 use std::{fs, thread};
 use std::sync::mpsc;
