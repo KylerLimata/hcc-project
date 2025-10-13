@@ -8,4 +8,5 @@ class DummyAgent:
         return [100.0, 0.0]
 
 sim.load_environment("TestEnvironment")
-sim.run_episode(DummyAgent(), 10)
+sim.run_episode(DummyAgent(), 100)
+sim.print("Finished running!")

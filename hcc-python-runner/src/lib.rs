@@ -7,6 +7,8 @@ use godot::prelude::*;
 use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
 use pyo3::prelude::PyAnyMethods;
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
+use tokio::runtime::{Handle, Runtime};
+use tokio::task::JoinHandle;
 
 struct HCCPythonRunnerExtension;
 
@@ -16,8 +18,10 @@ unsafe impl ExtensionLibrary for HCCPythonRunnerExtension {}
 #[derive(GodotClass)]
 #[class(base=Node)]
 struct PythonScriptRunner {
-    print_receiver: Option<Receiver<Message>>,
+    msg_receiver: Option<Receiver<Message>>,
     agent_return_sender: Option<Sender<Py<PyAny>>>,
+    python_task_handle: Option<JoinHandle<()>>,
+    tokio_runtime: Runtime,
     base: Base<Node>
 }
 
@@ -25,14 +29,16 @@ struct PythonScriptRunner {
 impl INode for PythonScriptRunner {
     fn init(base: Base<Node>) -> Self {
         Self {
-            print_receiver: None,
+            msg_receiver: None,
             agent_return_sender: None,
+            python_task_handle: None,
+            tokio_runtime: Runtime::new().expect("Failed to create Tokio runtime"),
             base
         }
     }
 
     fn physics_process(&mut self, delta: f64) {
-        if let Some(receiver) = self.print_receiver.as_mut() {
+        if let Some(receiver) = self.msg_receiver.as_mut() {
             let messages: Vec<_> = receiver.try_iter().collect(); // borrow ends here
             for message in messages {
                 match message {
@@ -54,6 +60,15 @@ impl INode for PythonScriptRunner {
                 }
             }
         }
+
+        let mut is_task_finished = false;
+
+        if let Some(handle) = self.python_task_handle.as_mut() {
+            is_task_finished = handle.is_finished()
+        }
+        if is_task_finished {
+            self.python_task_handle = None;
+        }
     }
 }
 
@@ -74,23 +89,29 @@ impl PythonScriptRunner {
         let simulation_runner = SimulationRunner {
             message_sender: tx,
         };
-        self.print_receiver = Some(rx);
+        self.msg_receiver = Some(rx);
 
         Python::initialize();
+        
+        let handle: Handle = self.tokio_runtime.handle().clone();
 
-        match Python::attach(|py| {
-            let locals = PyDict::new(py);
-            locals.set_item("sim", simulation_runner)?;
+        let join_handle = handle.spawn(async {
+            match Python::attach(|py| {
+                let locals = PyDict::new(py);
+                locals.set_item("sim", simulation_runner)?;
 
-            py.run(&*CString::new(file_contents).unwrap(), None, Some(&locals))
-        }) {
-            Ok(_) => {
-                godot_print!("Script ran successfully!");
+                py.run(&*CString::new(file_contents).unwrap(), None, Some(&locals))
+            }) {
+                Ok(_) => {
+                    godot_print!("Script ran successfully!");
+                }
+                Err(err) => {
+                    godot_error!("Error running python script: {:?}", err);
+                }
             }
-            Err(err) => {
-                godot_error!("Error running python script: {:?}", err);
-            }
-        }
+        });
+
+        self.python_task_handle = Some(join_handle);
     }
 
     #[func]

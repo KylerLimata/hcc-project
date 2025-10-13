@@ -9,3 +9,4 @@ crate-type = ["cdylib"]  # Compile this crate to a dynamic C library.
 [dependencies]
 godot = "0.3.5"
 pyo3 = { version = "0.26.0", features = ["extension-module"] }
+tokio = { version = "1.47.1", features = ["full"]}
