@@ -49,7 +49,7 @@ impl INode for PythonScriptRunner {
                     }
                     Message::RunEpisode(agent, max_steps, return_sender) => {
                         let wrapped = PythonAgent::new(agent);
-                        self.signals().evaluate_agent().emit(&wrapped);
+                        self.signals().run_episode().emit(&wrapped, max_steps);
                         self.agent_return_sender = Some(return_sender);
                     }
                 }
@@ -107,11 +107,15 @@ impl PythonScriptRunner {
 
     #[signal]
     fn evaluate_agent(agent: Gd<PythonAgent>);
+
+    #[signal]
+    fn run_episode(agent: Gd<PythonAgent>, max_steps: i64);
 }
 
 #[derive(GodotClass)]
 #[class(base=VehicleBody3D)]
 struct AgentVehicleBody {
+    #[var]
     agent: Option<Gd<PythonAgent>>,
     base: Base<VehicleBody3D>,
     distances: Vec<f64>

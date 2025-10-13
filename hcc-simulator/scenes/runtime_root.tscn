@@ -38,6 +38,7 @@ transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70
 
 [connection signal="evaluate_agent" from="PythonScriptRunner" to="." method="evaluate_agent"]
 [connection signal="load_environment" from="PythonScriptRunner" to="." method="load_environment"]
+[connection signal="run_episode" from="PythonScriptRunner" to="." method="run_episode"]
 [connection signal="output" from="MarginContainer/VBoxContainer/ScriptNameInput" to="." method="_on_script_name_input_output"]
 [connection signal="output" from="MarginContainer/VBoxContainer/ScriptNameInput" to="PythonScriptRunner" method="run_script"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/RunButton" to="MarginContainer/VBoxContainer/ScriptNameInput" method="_on_run_button_pressed"]
