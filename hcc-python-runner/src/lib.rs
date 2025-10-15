@@ -74,10 +74,10 @@ impl INode for PythonScriptRunner {
 #[godot_api]
 impl PythonScriptRunner {
     #[func]
-    fn run_script(&mut self, file: GString) {
-        godot_print!("loading python script `{}`", file);
+    fn run_script(&mut self, name: GString) {
+        godot_print!("Running `{}.py`", name);
 
-        let file_contents = match fs::read_to_string(format!("{}", file)) {
+        let file_contents = match fs::read_to_string(format!("{}.py", name)) {
             Ok(contents) => contents,
             Err(err) => {
                 godot_error!("Error loading python script: {:?}", err);
