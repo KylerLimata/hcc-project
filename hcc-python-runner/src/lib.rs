@@ -1,12 +1,11 @@
-use std::ffi::CString;
-use std::{fs, thread};
-use std::sync::{mpsc, Arc, Condvar, Mutex};
-use std::sync::mpsc::{Receiver, Sender, SendError};
 use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
-use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyErr, PyResult, Python};
-use pyo3::prelude::PyAnyMethods;
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
+use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
+use std::ffi::CString;
+use std::fs;
+use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{mpsc, Arc, Condvar, Mutex};
 use tokio::runtime::{Handle, Runtime};
 use tokio::task::JoinHandle;
 
@@ -19,7 +18,6 @@ unsafe impl ExtensionLibrary for HCCPythonRunnerExtension {}
 #[class(base=Node)]
 struct PythonScriptRunner {
     msg_receiver: Option<Receiver<Message>>,
-    agent_return_sender: Option<Sender<Py<PyAny>>>,
     episode_result: Option<EpisodeResult>,
     python_task_handle: Option<JoinHandle<()>>,
     tokio_runtime: Runtime,
@@ -31,7 +29,6 @@ impl INode for PythonScriptRunner {
     fn init(base: Base<Node>) -> Self {
         Self {
             msg_receiver: None,
-            agent_return_sender: None,
             episode_result: None,
             python_task_handle: None,
             tokio_runtime: Runtime::new().expect("Failed to create Tokio runtime"),
@@ -39,7 +36,7 @@ impl INode for PythonScriptRunner {
         }
     }
 
-    fn physics_process(&mut self, delta: f64) {
+    fn physics_process(&mut self, _delta: f64) {
         if let Some(receiver) = self.msg_receiver.as_mut() {
             let messages: Vec<_> = receiver.try_iter().collect(); // borrow ends here
             for message in messages {
@@ -89,16 +86,13 @@ impl PythonScriptRunner {
         };
         let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel();
         let handle: Handle = self.tokio_runtime.handle().clone();
-        let handle2: Handle = handle.clone();
         self.msg_receiver = Some(rx);
 
         Python::initialize();
 
         let join_handle = handle.spawn(async move {
             let simulation_runner = SimulationRunner {
-                message_sender: tx,
-                tokio_handle: handle2,
-                python_task_handle: None
+                message_sender: tx
             };
 
             match Python::attach(|py| {
@@ -126,7 +120,7 @@ impl PythonScriptRunner {
             None => godot_error!("Error returning agent"),
             Some(e) => {
                 Python::attach(|py| {
-                    e.set_result(py, bound.agent.clone_ref(py));
+                    e.set_result(bound.agent.clone_ref(py));
                 });
             }
         }
@@ -163,7 +157,7 @@ impl IVehicleBody3D for AgentVehicleBody {
         }
     }
 
-    fn physics_process(&mut self, delta: f64) {
+    fn physics_process(&mut self, _delta: f64) {
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
 
@@ -217,9 +211,7 @@ impl PythonAgent {
 
 #[pyclass]
 struct SimulationRunner {
-    message_sender: Sender<Message>,
-    tokio_handle: Handle,
-    python_task_handle: Option<JoinHandle<()>>
+    message_sender: Sender<Message>
 }
 
 #[pymethods]
@@ -238,14 +230,14 @@ impl SimulationRunner {
         }
     }
 
-    fn evaluate_agent(&mut self, py: Python, instance: &Bound<'_, PyAny>) -> PyResult<()> {
+    fn evaluate_agent(&mut self,instance: &Bound<'_, PyAny>) -> PyResult<()> {
         match self.message_sender.send(Message::EvaluateAgent(instance.clone().unbind())) {
             Ok(_) => Ok(()),
             Err(_) => Err(pyo3::exceptions::PyOSError::new_err("Failed to register agent"))
         }
     }
 
-    fn run_episode(&mut self, py: Python, instance: &Bound<'_, PyAny>, max_steps: i64) -> PyResult<EpisodeResult> {
+    fn run_episode(&mut self, instance: &Bound<'_, PyAny>, max_steps: i64) -> PyResult<EpisodeResult> {
         let episode_result = EpisodeResult::new();
         let episode_result_clone = episode_result.clone();
 
@@ -274,11 +266,11 @@ impl EpisodeResult {
     }
 
     fn is_done(&self) -> bool {
-        let (lock, cvar) = &*self.inner;
+        let (lock, _) = &*self.inner;
         lock.lock().unwrap().is_some()
     }
 
-    fn set_result(&self, py: Python, value: Py<PyAny>) {
+    fn set_result(&self, value: Py<PyAny>) {
         let (lock, cvar) = &*self.inner;
         let mut guard = lock.lock().unwrap();
         *guard = Some(Ok(value));
@@ -292,7 +284,7 @@ impl EpisodeResult {
         cvar.notify_all();
     }
 
-    fn get_result(&self, py: Python) -> PyResult<Py<PyAny>> {
+    fn get_result(&self) -> PyResult<Py<PyAny>> {
         let (lock, cvar) = &*self.inner;
         let mut guard = lock.lock().unwrap();
         while guard.is_none() {
