@@ -1,45 +1,55 @@
-[gd_scene load_steps=3 format=3 uid="uid://8qkbb5m2yyc6"]
+[gd_scene load_steps=4 format=3 uid="uid://8qkbb5m2yyc6"]
 
 [ext_resource type="Script" uid="uid://cj3gbi8hdqbiw" path="res://scripts/script_name_input.gd" id="1_nixts"]
 [ext_resource type="Script" uid="uid://dhwsvqxs5lcgd" path="res://scripts/runtime_root.gd" id="1_x21f8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x21f8"]
+bg_color = Color(0.35, 0.35, 0.35, 1)
 
 [node name="RuntimeRoot" type="Node3D"]
 script = ExtResource("1_x21f8")
 
 [node name="PythonScriptRunner" type="PythonScriptRunner" parent="."]
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 0, 0)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 50
-theme_override_constants/margin_top = 50
-theme_override_constants/margin_right = 50
-theme_override_constants/margin_bottom = 50
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
-layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-alignment = 1
 
-[node name="ScriptNameInput" type="LineEdit" parent="MarginContainer/VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_x21f8")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="ScriptNameInput" type="LineEdit" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
 script = ExtResource("1_nixts")
 
-[node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="RunButton" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
-text = "Run"
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 0, 0)
+text = "Run Python Script"
 
 [connection signal="return_agent" from="." to="PythonScriptRunner" method="return_agent"]
 [connection signal="evaluate_agent" from="PythonScriptRunner" to="." method="evaluate_agent"]
 [connection signal="load_environment" from="PythonScriptRunner" to="." method="load_environment"]
 [connection signal="run_episode" from="PythonScriptRunner" to="." method="run_episode"]
-[connection signal="output" from="MarginContainer/VBoxContainer/ScriptNameInput" to="." method="_on_script_name_input_output"]
-[connection signal="output" from="MarginContainer/VBoxContainer/ScriptNameInput" to="PythonScriptRunner" method="run_script"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/RunButton" to="MarginContainer/VBoxContainer/ScriptNameInput" method="_on_run_button_pressed"]
+[connection signal="output" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/ScriptNameInput" to="." method="_on_script_name_input_output"]
+[connection signal="output" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/ScriptNameInput" to="PythonScriptRunner" method="run_script"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/RunButton" to="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/ScriptNameInput" method="_on_run_button_pressed"]

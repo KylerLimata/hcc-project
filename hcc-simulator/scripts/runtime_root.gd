@@ -35,9 +35,10 @@ func _physics_process(_delta: float) -> void:
 				current_environment.remove_child(current_agent_node)
 				current_agent_node = null
 				current_agent = null
+				$VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/RunButton.disabled = false
 			else:
 				steps_remaining -= 1
 
 
 func _on_script_name_input_output(_filename: Variant) -> void:
-	$MarginContainer.hide()
+	$VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/RunButton.disabled = true
