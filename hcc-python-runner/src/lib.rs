@@ -42,11 +42,6 @@ impl INode for PythonScriptRunner {
             for message in messages {
                 match message {
                     Message::Print(s) => godot_print!("{}", s),
-                    Message::EvaluateAgent(agent) => {
-                        godot_print!("Agent received");
-                        let wrapped = PythonAgent::new(agent);
-                        self.signals().evaluate_agent().emit(&wrapped)
-                    },
                     Message::LoadEnvironment(ref name) => {
                         godot_print!("Loading environment...");
                         self.signals().load_environment().emit(&GString::from(name));
@@ -230,13 +225,6 @@ impl SimulationRunner {
         }
     }
 
-    fn evaluate_agent(&mut self,instance: &Bound<'_, PyAny>) -> PyResult<()> {
-        match self.message_sender.send(Message::EvaluateAgent(instance.clone().unbind())) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(pyo3::exceptions::PyOSError::new_err("Failed to register agent"))
-        }
-    }
-
     fn run_episode(&mut self, instance: &Bound<'_, PyAny>, max_steps: i64) -> PyResult<EpisodeResult> {
         let episode_result = EpisodeResult::new();
         let episode_result_clone = episode_result.clone();
@@ -300,7 +288,6 @@ impl EpisodeResult {
 enum Message {
     Print(String),
     LoadEnvironment(String),
-    EvaluateAgent(Py<PyAny>),
     RunEpisode(Py<PyAny>, i64, EpisodeResult),
 }
 
