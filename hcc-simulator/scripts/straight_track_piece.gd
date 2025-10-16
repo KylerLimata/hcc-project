@@ -32,3 +32,6 @@ func update_mesh():
 	$Ground.position.x = length/2
 	$"Left Wall".position.x = length/2
 	$"Right Wall".position.x = length/2
+
+func get_end_transform():
+	return Transform3D(Basis(), Vector3(length, 0, 0))

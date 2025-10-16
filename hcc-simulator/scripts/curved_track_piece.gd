@@ -70,10 +70,6 @@ func update_mesh():
 	var right_wall_outer_points = compute_points(center, radius + 1.75, 0.0)
 	right_wall_outer_points.reverse()
 	queued_right_wall_array = right_wall_inner_points + right_wall_outer_points
-	
-	print("here!")
-	
-	pass
 
 func compute_points(center: Vector3, radius_prime: float, phi: float) -> Array[Vector2] :
 	var theta: float = 0.0
@@ -95,3 +91,18 @@ func compute_points(center: Vector3, radius_prime: float, phi: float) -> Array[V
 		theta = theta + 5.0
 	
 	return points
+
+func get_end_transform():
+	var angle_radians = deg_to_rad(angle)
+	var signed_radius = radius
+	
+	if direction == 1:
+		angle_radians = -angle_radians
+		signed_radius = -signed_radius
+	
+	var s = sin(angle_radians)
+	var c = cos(angle_radians)
+	var pos = Vector3(signed_radius*s, 0.0, -signed_radius*(1.0 - c))
+	var basis = Basis(Vector3.UP, angle_radians)
+	
+	return Transform3D(basis, pos)
