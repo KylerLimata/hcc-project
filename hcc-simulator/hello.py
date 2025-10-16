@@ -8,7 +8,7 @@ class DummyAgent:
         return [100.0, 0.0]
 
 sim.load_environment("TestEnvironment")
-result = sim.run_episode(DummyAgent(), 100)
+result = sim.run_episode(DummyAgent(), 100*60)
 sim.print("Got the future!")
 
 while True:
