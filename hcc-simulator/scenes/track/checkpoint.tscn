@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3 uid="uid://cadrg823rbyi2"]
+
+[ext_resource type="Script" uid="uid://bfp7m24nod542" path="res://scripts/checkpoint.gd" id="1_lhwtn"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_4igig"]
+size = Vector3(3.5, 0.75, 0.025)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lhwtn"]
+size = Vector3(3.5, 0.75, 0.025)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lhwtn"]
+transparency = 1
+albedo_color = Color(0, 1, 0.6500001, 0.4862745)
+
+[node name="Checkpoint" type="Node3D"]
+script = ExtResource("1_lhwtn")
+
+[node name="Area3D" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0)
+collision_mask = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_4igig")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0)
+mesh = SubResource("BoxMesh_lhwtn")
+surface_material_override/0 = SubResource("StandardMaterial3D_lhwtn")
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
