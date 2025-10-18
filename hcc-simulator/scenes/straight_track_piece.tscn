@@ -1,61 +1,52 @@
-[gd_scene load_steps=10 format=3 uid="uid://d2twlygj6e7gr"]
+[gd_scene load_steps=4 format=3 uid="uid://d2twlygj6e7gr"]
 
 [ext_resource type="Script" uid="uid://cop8im4p831b" path="res://scripts/straight_track_piece.gd" id="1_eb81t"]
 [ext_resource type="Material" uid="uid://ci4sj2y85g2oo" path="res://assets/track_ground.tres" id="2_iml1p"]
 [ext_resource type="Material" uid="uid://br2we2vdjxmah" path="res://assets/track_wall.tres" id="2_yodu8"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_eb81t"]
-size = Vector3(15, 0.25, 4)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_eb81t"]
-size = Vector3(15, 0.25, 4)
-
-[sub_resource type="BoxMesh" id="BoxMesh_yodu8"]
-size = Vector3(15, 0.75, 0.25)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_yodu8"]
-size = Vector3(15, 0.75, 0.25)
-
-[sub_resource type="BoxMesh" id="BoxMesh_iml1p"]
-size = Vector3(15, 0.75, 0.25)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_iml1p"]
-size = Vector3(15, 0.75, 0.25)
-
 [node name="StraightTrackPiece" type="Node3D"]
 script = ExtResource("1_eb81t")
 
 [node name="Ground" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
-collision_mask = 3
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.125, 0)
-material_override = ExtResource("2_iml1p")
-mesh = SubResource("BoxMesh_eb81t")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.125, 0)
-shape = SubResource("BoxShape3D_eb81t")
-
-[node name="Left Wall" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.375, -1.875)
 collision_mask = 3
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Left Wall"]
-material_override = ExtResource("2_yodu8")
-mesh = SubResource("BoxMesh_yodu8")
+[node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+depth = 0.25
+polygon = PackedVector2Array(-2, 0, -2, 1, 2, 1, 2, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Left Wall"]
-shape = SubResource("BoxShape3D_yodu8")
+[node name="CSGPolygon3D" type="CSGPolygon3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, -0.125, 0)
+polygon = PackedVector2Array(-2, 0, -2, 1, 2, 1, 2, 0)
+depth = 0.25
+material = ExtResource("2_iml1p")
 
-[node name="Right Wall" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.375, 1.875)
+[node name="LeftWall" type="StaticBody3D" parent="."]
 collision_mask = 3
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Right Wall"]
-material_override = ExtResource("2_yodu8")
-mesh = SubResource("BoxMesh_iml1p")
+[node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="LeftWall"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.375, 0)
+depth = 0.75
+polygon = PackedVector2Array(2, 0, 2, 1, 1.75, 1, 1.75, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Right Wall"]
-shape = SubResource("BoxShape3D_iml1p")
+[node name="CSGPolygon3D" type="CSGPolygon3D" parent="LeftWall"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+polygon = PackedVector2Array(2, 0, 2, 1, 1.75, 1, 1.75, 0)
+depth = 0.75
+material = ExtResource("2_yodu8")
+
+[node name="RightWall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0)
+collision_mask = 3
+
+[node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="RightWall"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+depth = 0.75
+polygon = PackedVector2Array(-2, 0, -2, 1, -1.75, 1, -1.75, 0)
+
+[node name="CSGPolygon3D" type="CSGPolygon3D" parent="RightWall"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, -0.375, 0)
+polygon = PackedVector2Array(-2, 0, -2, 1, -1.75, 1, -1.75, 0)
+depth = 0.75
+material = ExtResource("2_yodu8")

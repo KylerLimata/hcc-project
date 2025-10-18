@@ -1,7 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://cmoy04wx2yjiu"]
+[gd_scene load_steps=3 format=3 uid="uid://cmoy04wx2yjiu"]
 
 [ext_resource type="Script" uid="uid://cj5lxdhxn8nhc" path="res://scripts/track.gd" id="1_336ln"]
-[ext_resource type="PackedScene" uid="uid://n6gl8363mf31" path="res://scenes/curved_track_piece.tscn" id="1_ahl4j"]
 [ext_resource type="PackedScene" uid="uid://d2twlygj6e7gr" path="res://scenes/straight_track_piece.tscn" id="2_1004d"]
 
 [node name="Environment" type="Node3D"]
@@ -10,12 +9,5 @@
 script = ExtResource("1_336ln")
 
 [node name="StraightTrackPiece" parent="Track" instance=ExtResource("2_1004d")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, -5)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, 0)
 length = 15.0
-
-[node name="CurvedTrackPiece" parent="Track" instance=ExtResource("1_ahl4j")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -6.556708e-07, 0, 10)
-
-[node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("1_ahl4j")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.9999995, 0, 15)
-angle = 60.0
