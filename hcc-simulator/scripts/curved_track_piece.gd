@@ -5,7 +5,7 @@ extends Node3D
 @export_group("Track")
 @export_range(5.0, 90.0, 5.0, "suffix:deg") var angle: float = 90.0 : set = set_angle
 @export_range(5.0, 15.0, 0.5, "suffix:m") var radius: float = 5.0 : set = set_radius
-@export_enum("Left", "Right") var direction: int = 0 : set = set_direction
+@export_enum("Right", "Left") var direction: int = 0 : set = set_direction
 
 var queued_ground_array = null
 var queued_left_wall_array = null
@@ -47,9 +47,9 @@ func update_mesh():
 	
 	# A value of 0 indicates a left turn
 	if direction == 0:
-		center = Vector3(0.0, 0.0, -radius)
+		center = Vector3(-radius, 0.0, 0.0)
 	else:
-		center = Vector3(0.0, 0.0, radius)
+		center = Vector3(radius, 0.0, 0.0)
 	
 	# update the ground
 	var ground_inner_points = compute_points(center, radius - 2, 0.0)
@@ -76,14 +76,13 @@ func compute_points(center: Vector3, radius_prime: float, phi: float) -> Array[V
 	var points: Array[Vector2] = []
 	
 	while (theta <= angle):
-		var next = Vector3(0.0, 0.0, radius_prime)
+		var next = Vector3(radius_prime, 0.0, 0.0)
 		
 		if direction == 0:
-			next = Vector3(0.0, 0.0, radius_prime)
-			next = next.rotated(Vector3.UP, deg_to_rad(theta + phi))
-		else:
-			next = Vector3(0.0, 0.0, -radius_prime)
 			next = next.rotated(Vector3.UP, deg_to_rad(-(theta + phi)))
+		else:
+			next = Vector3(-radius_prime, 0.0, 0.0)
+			next = next.rotated(Vector3.UP, deg_to_rad((theta + phi)))
 		
 		next = next + center
 		points.append(Vector2(next.x, next.z))
@@ -93,16 +92,18 @@ func compute_points(center: Vector3, radius_prime: float, phi: float) -> Array[V
 	return points
 
 func get_end_transform():
-	var angle_radians = deg_to_rad(angle)
+	var theta = deg_to_rad(angle)
 	var signed_radius = radius
 	
-	if direction == 1:
-		angle_radians = -angle_radians
+	if direction == 0:
+		theta = -theta
+	else:
 		signed_radius = -signed_radius
 	
-	var s = sin(angle_radians)
-	var c = cos(angle_radians)
-	var pos = Vector3(signed_radius*s, 0.0, -signed_radius*(1.0 - c))
-	var basis = Basis(Vector3.UP, angle_radians)
+	var s = sin(theta)
+	var c = cos(theta)
+	
+	var pos = Vector3(signed_radius*(c - 1.0), 0.0, -signed_radius*s)
+	var basis = Basis(Vector3.UP, theta)
 	
 	return Transform3D(basis, pos)
