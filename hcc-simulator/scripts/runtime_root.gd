@@ -38,7 +38,7 @@ func _physics_process(_delta: float) -> void:
 			terminated = false
 		else:
 			# Check if episode has finished
-			if current_step < self.max_steps:
+			if current_step >= self.max_steps:
 				emit_signal("return_agent", current_agent_node.agent)
 				emit_signal("complete_episode", checkpoint_times, terminated)
 				current_environment.remove_child(current_agent_node)

@@ -8,12 +8,12 @@ class DummyAgent:
         return [100.0, 0.0]
 
 sim.load_environment("TestEnvironment")
-result = sim.run_episode(DummyAgent(), 100*60)
-sim.print("Got the future!")
+handle = sim.run_episode(DummyAgent(), 5*60)
+sim.print("Got the handle!")
 
 while True:
-    if result.is_done():
+    if handle.is_done():
         break
 
-data = result.get_result()
+checkpoint_times, terminated = handle.get_result()
 sim.print("Finished running!")

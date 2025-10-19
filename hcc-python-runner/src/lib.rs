@@ -18,7 +18,7 @@ unsafe impl ExtensionLibrary for HCCPythonRunnerExtension {}
 #[class(base=Node)]
 struct PythonScriptRunner {
     msg_receiver: Option<Receiver<Message>>,
-    episode_result: Option<EpisodeResult>,
+    episode_handle: Option<EpisodeHandle>,
     python_task_handle: Option<JoinHandle<()>>,
     tokio_runtime: Runtime,
     base: Base<Node>
@@ -29,7 +29,7 @@ impl INode for PythonScriptRunner {
     fn init(base: Base<Node>) -> Self {
         Self {
             msg_receiver: None,
-            episode_result: None,
+            episode_handle: None,
             python_task_handle: None,
             tokio_runtime: Runtime::new().expect("Failed to create Tokio runtime"),
             base
@@ -49,7 +49,7 @@ impl INode for PythonScriptRunner {
                     Message::RunEpisode(agent, max_steps, episode_result) => {
                         let wrapped = PythonAgent::new(agent);
                         self.signals().run_episode().emit(&wrapped, max_steps);
-                        self.episode_result = Some(episode_result);
+                        self.episode_handle = Some(episode_result);
                     }
                 }
             }
@@ -111,21 +111,26 @@ impl PythonScriptRunner {
     fn return_agent(&mut self, mut python_agent: Gd<PythonAgent>) {
         let bound = python_agent.bind_mut();
 
-        match &self.episode_result {
+        match &self.episode_handle {
             None => godot_error!("Error returning agent"),
             Some(e) => {
                 Python::attach(|py| {
-                    e.set_result(bound.agent.clone_ref(py));
+
                 });
             }
         }
 
-        self.episode_result = None
+        self.episode_handle = None
     }
 
     #[func]
     fn complete_episode(&mut self, checkpoint_times: Array<i64>, terminated: bool) {
-        
+        match &mut self.episode_handle {
+            None => godot_error!("Attempted to return episode result when no episode is running."),
+            Some(handle) => {
+                handle.set_result((checkpoint_times.iter_shared().collect(), terminated))
+            }
+        }
     }
 
     #[signal]
@@ -230,8 +235,8 @@ impl SimulationRunner {
         }
     }
 
-    fn run_episode(&mut self, instance: &Bound<'_, PyAny>, max_steps: i64) -> PyResult<EpisodeResult> {
-        let episode_result = EpisodeResult::new();
+    fn run_episode(&mut self, instance: &Bound<'_, PyAny>, max_steps: i64) -> PyResult<EpisodeHandle> {
+        let episode_result = EpisodeHandle::new();
         let episode_result_clone = episode_result.clone();
 
         match self.message_sender.send(Message::RunEpisode(instance.clone().unbind(), max_steps, episode_result_clone)) {
@@ -245,12 +250,12 @@ impl SimulationRunner {
 
 #[pyclass]
 #[derive(Clone)]
-pub struct EpisodeResult {
-    inner: Arc<(Mutex<Option<Result<Py<PyAny>, String>>>, Condvar)>,
+pub struct EpisodeHandle {
+    inner: Arc<(Mutex<Option<(Vec<i64>, bool)>>, Condvar)>,
 }
 
 #[pymethods]
-impl EpisodeResult {
+impl EpisodeHandle {
     #[new]
     fn new() -> Self {
         Self {
@@ -263,36 +268,26 @@ impl EpisodeResult {
         lock.lock().unwrap().is_some()
     }
 
-    fn set_result(&self, value: Py<PyAny>) {
+    fn set_result(&self, value: (Vec<i64>, bool)) {
         let (lock, cvar) = &*self.inner;
         let mut guard = lock.lock().unwrap();
-        *guard = Some(Ok(value));
+        *guard = Some(value);
         cvar.notify_all();
     }
 
-    fn set_error(&self, err: String) {
-        let (lock, cvar) = &*self.inner;
-        let mut guard = lock.lock().unwrap();
-        *guard = Some(Err(err));
-        cvar.notify_all();
-    }
-
-    fn get_result(&self) -> PyResult<Py<PyAny>> {
+    fn get_result(&self) -> PyResult<(Vec<i64>, bool)> {
         let (lock, cvar) = &*self.inner;
         let mut guard = lock.lock().unwrap();
         while guard.is_none() {
             guard = cvar.wait(guard).unwrap();  // block until result is ready
         }
-        match guard.take().unwrap() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e)),
-        }
+        Ok(guard.as_ref().unwrap().clone())
     }
 }
 
 enum Message {
     Print(String),
     LoadEnvironment(String),
-    RunEpisode(Py<PyAny>, i64, EpisodeResult),
+    RunEpisode(Py<PyAny>, i64, EpisodeHandle),
 }
 
