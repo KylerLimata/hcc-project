@@ -108,22 +108,6 @@ impl PythonScriptRunner {
     }
 
     #[func]
-    fn return_agent(&mut self, mut python_agent: Gd<PythonAgent>) {
-        let bound = python_agent.bind_mut();
-
-        match &self.episode_handle {
-            None => godot_error!("Error returning agent"),
-            Some(e) => {
-                Python::attach(|py| {
-
-                });
-            }
-        }
-
-        self.episode_handle = None
-    }
-
-    #[func]
     fn complete_episode(&mut self, checkpoint_times: Array<i64>, terminated: bool) {
         match &mut self.episode_handle {
             None => godot_error!("Attempted to return episode result when no episode is running."),

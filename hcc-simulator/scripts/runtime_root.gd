@@ -1,13 +1,12 @@
 extends Node3D
 
-signal return_agent(agent: PythonAgent)
 signal complete_episode(checkpoint_times: Array[int], terminated: bool)
 
 var current_environment: Node3D = null
 var current_agent: PythonAgent = null
 var current_agent_node: AgentVehicleBody = null
 var current_step: int = 0
-var max_steps: int = 0
+var end_step: int = 0
 var checkpoint_times: Array[int] = []
 var terminated: bool = false
 
@@ -22,7 +21,7 @@ func evaluate_agent(agent: PythonAgent):
 func run_episode(agent: PythonAgent, max_steps: int):
 	current_agent = agent
 	current_step = 0
-	self.max_steps = max_steps
+	end_step = max_steps
 	
 func _physics_process(_delta: float) -> void:
 	# Check if there is a current environment and agent
@@ -38,8 +37,7 @@ func _physics_process(_delta: float) -> void:
 			terminated = false
 		else:
 			# Check if episode has finished
-			if current_step >= self.max_steps:
-				emit_signal("return_agent", current_agent_node.agent)
+			if current_step >= end_step:
 				emit_signal("complete_episode", checkpoint_times, terminated)
 				current_environment.remove_child(current_agent_node)
 				current_agent_node = null
@@ -56,4 +54,4 @@ func on_checkpoint_activated(final: bool):
 	checkpoint_times.append(current_step)
 	
 	if final:
-		current_step = max_steps
+		current_step = end_step
