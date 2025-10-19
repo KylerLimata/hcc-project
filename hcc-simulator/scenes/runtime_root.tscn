@@ -46,6 +46,7 @@ script = ExtResource("1_nixts")
 layout_mode = 2
 text = "Run Python Script"
 
+[connection signal="complete_episode" from="." to="PythonScriptRunner" method="complete_episode"]
 [connection signal="return_agent" from="." to="PythonScriptRunner" method="return_agent"]
 [connection signal="evaluate_agent" from="PythonScriptRunner" to="." method="evaluate_agent"]
 [connection signal="load_environment" from="PythonScriptRunner" to="." method="load_environment"]

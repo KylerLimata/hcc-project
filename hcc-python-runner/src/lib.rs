@@ -123,6 +123,11 @@ impl PythonScriptRunner {
         self.episode_result = None
     }
 
+    #[func]
+    fn complete_episode(&mut self, checkpoint_times: Array<i64>, terminated: bool) {
+        
+    }
+
     #[signal]
     fn load_environment(path: GString);
 
