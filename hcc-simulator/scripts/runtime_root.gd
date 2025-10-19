@@ -5,7 +5,9 @@ signal return_agent(agent: PythonAgent)
 var current_environment: Node3D = null
 var current_agent: PythonAgent = null
 var current_agent_node: AgentVehicleBody = null
-var steps_remaining: int = 0
+var current_step: int = 0
+var max_steps: int = 0
+var checkpoint_times: Array[int] = []
 
 func load_environment(env_name: String):
 	var scene = load("res://scenes/environments/" + env_name + ".tscn").instantiate()
@@ -17,7 +19,8 @@ func evaluate_agent(agent: PythonAgent):
 
 func run_episode(agent: PythonAgent, max_steps: int):
 	current_agent = agent
-	steps_remaining = max_steps
+	current_step = 0
+	self.max_steps = max_steps
 	
 func _physics_process(_delta: float) -> void:
 	# Check if there is a current environment and agent
@@ -27,18 +30,22 @@ func _physics_process(_delta: float) -> void:
 			var scene = load("res://scenes/agent.tscn").instantiate()
 			current_agent_node = scene
 			current_environment.add_child(current_agent_node)
+			current_environment.connect("checkpoint_activated", on_checkpoint_activated)
 			current_agent_node.agent = current_agent
 		else:
 			# Check if episode has finished
-			if steps_remaining <= 0:
+			if current_step < self.max_steps:
 				emit_signal("return_agent", current_agent_node.agent)
 				current_environment.remove_child(current_agent_node)
 				current_agent_node = null
 				current_agent = null
 				$VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/RunButton.disabled = false
 			else:
-				steps_remaining -= 1
+				current_step += 1
 
 
 func _on_script_name_input_output(_filename: Variant) -> void:
 	$VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/RunButton.disabled = true
+
+func on_checkpoint_activated(final: bool):
+	checkpoint_times.append(current_step)
