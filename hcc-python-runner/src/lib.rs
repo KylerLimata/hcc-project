@@ -147,18 +147,33 @@ impl IVehicleBody3D for AgentVehicleBody {
     }
 
     fn physics_process(&mut self, _delta: f64) {
+        let global_transform = self.base_mut().get_global_transform();
+        let velocity = self.base().get_linear_velocity();
+        let forward = global_transform.basis.col_c();
+        let speed = velocity.dot(forward) as f64;
+
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
-
                 let distances = if self.distances.is_empty() { vec![5.0, 5.0, 5.0] } else { self.distances.clone() };
-                let args = PyTuple::new(py, [distances]).unwrap();
+                let state = vec![speed];
+                let args = PyTuple::new(py, [distances, state]).unwrap();
                 let pyclass = agent.bind_mut();
 
-                pyclass.agent.call_method1(py, "eval_step", args).unwrap().extract(py).unwrap()
+                pyclass.agent.call_method1(py, "eval", args).unwrap().extract(py).unwrap()
             });
 
-            self.base_mut().set_engine_force(*outputs.get(0).unwrap());
-            self.base_mut().set_steering(*outputs.get(1).unwrap());
+            let engine_force_multiplier = outputs.get(0).unwrap();
+            let steering_direction = outputs.get(1).unwrap();
+
+            if engine_force_multiplier > &0.0 {
+                self.base_mut().set_engine_force(*outputs.get(0).unwrap()*25.0);
+            } else {
+                self.base_mut().set_brake(*engine_force_multiplier*-25.0);
+            }
+
+            let steering_angle = self.base_mut().get_steering() + steering_direction;
+
+            self.base_mut().set_steering(steering_angle.clamp(-45.0, 45.0));
         }
     }
 }

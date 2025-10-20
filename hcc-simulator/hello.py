@@ -3,9 +3,11 @@ sim.print("Hello from Python!")
 class DummyAgent:
     def __init__(self):
         pass
+    
+    def eval(self, inputs: list[float], state: list[float]):
+        # Code for computing engine force and state using inputs
 
-    def eval_step(self, distances: list[float]):
-        return [100.0, 0.0]
+        return [1.0, 0.0]
 
 sim.load_environment("TestEnvironment")
 handle = sim.run_episode(DummyAgent(), 5*60)
