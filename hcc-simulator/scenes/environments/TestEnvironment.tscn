@@ -22,4 +22,38 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
 [node name="CurvedTrackPiece" parent="Track" instance=ExtResource("1_ahl4j")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
 
+[node name="Checkpoint2" parent="Track" instance=ExtResource("3_j84yq")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -5, 0, 11)
+
+[node name="StraightTrackPiece" parent="Track" instance=ExtResource("2_1004d")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -5, 0, 11)
+length = 5.0
+
+[node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("1_ahl4j")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -10, 0, 11)
+angle = 75.0
+radius = 6.0
+direction = 1
+
+[node name="Checkpoint3" parent="Track" instance=ExtResource("3_j84yq")]
+transform = Transform3D(0.9659258, 0, -0.2588191, 0, 1, 0, 0.2588191, 0, 0.9659258, -15.795555, 0, 15.447085)
+
+[node name="CurvedTrackPiece3" parent="Track" instance=ExtResource("1_ahl4j")]
+transform = Transform3D(0.9659258, 0, -0.2588191, 0, 1, 0, 0.2588191, 0, 0.9659258, -15.795555, 0, 15.447085)
+angle = 60.0
+radius = 10.0
+direction = 1
+
+[node name="StraightTrackPiece3" parent="Track" instance=ExtResource("2_1004d")]
+transform = Transform3D(0.7071068, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.7071068, -13.207365, 0, 25.106346)
+length = 10.0
+
+[node name="Checkpoint4" parent="Track" instance=ExtResource("3_j84yq")]
+transform = Transform3D(0.7071068, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.7071068, -6.136297, 0, 32.177414)
+final = true
+
+[node name="StraightTrackPiece4" parent="Track" instance=ExtResource("2_1004d")]
+transform = Transform3D(0.7071068, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.7071068, -6.136297, 0, 32.177414)
+length = 14.0
+
 [connection signal="checkpoint_activated" from="Track/Checkpoint" to="." method="on_checkpoint_activated"]
