@@ -151,7 +151,7 @@ impl IVehicleBody3D for AgentVehicleBody {
         let velocity = self.base().get_linear_velocity();
         let forward = global_transform.basis.col_c();
         let speed = velocity.dot(forward) as f64;
-        let steering_angle = self.base_mut().get_steering();
+        let steering_angle = self.base_mut().get_steering() as f64;
 
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
@@ -172,9 +172,9 @@ impl IVehicleBody3D for AgentVehicleBody {
                 self.base_mut().set_brake(*engine_force_multiplier*-25.0);
             }
 
-            let steering_angle = steering_angle + steering_direction;
+            let steering_angle = steering_angle + *steering_direction as f64;
 
-            self.base_mut().set_steering(steering_angle.clamp(-45.0, 45.0));
+            self.base_mut().set_steering(steering_angle.clamp(-45.0, 45.0) as f32);
         }
     }
 }
