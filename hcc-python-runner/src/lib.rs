@@ -157,7 +157,7 @@ impl IVehicleBody3D for AgentVehicleBody {
             let outputs: Vec<f32> = Python::attach(|py| {
                 let distances = if self.distances.is_empty() { vec![5.0, 5.0, 5.0] } else { self.distances.clone() };
                 let state = vec![speed, steering_angle];
-                let args = PyTuple::new(py, [distances, state]).unwrap();
+                let args = (distances, state);
                 let pyclass = agent.bind_mut();
 
                 pyclass.agent.call_method1(py, "eval", args).unwrap().extract(py).unwrap()
