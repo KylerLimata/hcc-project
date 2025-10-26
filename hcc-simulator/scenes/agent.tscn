@@ -81,7 +81,7 @@ transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 0
 mesh = SubResource("CylinderMesh_yc63n")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-1, 2.2185611e-16, -8.742278e-08, -4.108561e-08, 0.8826853, 0.46996462, 7.7166796e-08, 0.46996462, -0.8826853, 0, 1.25, -2)
+transform = Transform3D(-4.371139e-08, 1, 4.371139e-08, 0, -4.371139e-08, 1, 1, 4.371139e-08, 1.9106855e-15, 0, 6, 0)
 
 [node name="Raycasts" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 1.1)
