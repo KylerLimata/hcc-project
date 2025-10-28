@@ -1,3 +1,4 @@
+use std::f64::consts::{FRAC_PI_4, PI};
 use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
@@ -8,6 +9,8 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
 use tokio::runtime::{Handle, Runtime};
 use tokio::task::JoinHandle;
+
+const DEGREES_30_RADIANS: f64 = 30.0 * PI / 180.0;
 
 struct HCCPythonRunnerExtension;
 
@@ -164,17 +167,11 @@ impl IVehicleBody3D for AgentVehicleBody {
             });
 
             let engine_force_multiplier = outputs.get(0).unwrap();
-            let steering_direction = outputs.get(1).unwrap();
+            let steering_direction = outputs.get(1).unwrap().clamp(-1.0, 1.0) as f64;
+            let steering_angle = steering_angle + steering_direction*PI/180.0;
 
-            if engine_force_multiplier > &0.0 {
-                self.base_mut().set_engine_force(*outputs.get(0).unwrap()*25.0);
-            } else {
-                self.base_mut().set_brake(*engine_force_multiplier*-25.0);
-            }
-
-            let steering_angle = steering_angle + *steering_direction as f64;
-
-            self.base_mut().set_steering(steering_angle.clamp(-45.0, 45.0) as f32);
+            self.base_mut().set_engine_force(*engine_force_multiplier*25.0);
+            self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS) as f32);
         }
     }
 }

@@ -11,7 +11,7 @@ class BaselineAgent:
         speed = state[0]
         steering_angle = state[1]
 
-        target_speed = 20*(forward_distance - 4)
+        target_speed = 20*(forward_distance)
         speed_diff = target_speed - speed
         engine_force = 0.0
 
@@ -31,7 +31,7 @@ class BaselineAgent:
         return [engine_force, steering_direction]
 
 sim.load_environment("TestEnvironment")
-handle = sim.run_episode(BaselineAgent(), 5*60)
+handle = sim.run_episode(BaselineAgent(), 20*60)
 sim.print("Running episode for baseline agent.")
 
 while True:
