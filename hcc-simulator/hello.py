@@ -1,3 +1,5 @@
+import math
+
 class BaselineAgent:
     def __init__(self):
         pass
@@ -12,27 +14,32 @@ class BaselineAgent:
         steering_angle = state[1]
 
         target_speed = 20*(forward_distance)
-        speed_diff = target_speed - speed
+        speed_diff = speed - target_speed
         engine_force = 0.0
 
-        if speed_diff > 1.0:
+        if speed_diff < 1.0:
             engine_force = 1.0
-        elif speed_diff < 1.0:
+        elif speed_diff > 1.0:
             engine_force = -1.0
 
         side_distance_diff = left_distance - right_distance
         steering_direction = 0.0
-
+        
         if side_distance_diff > 1.0:
             steering_direction = 1.0
         elif side_distance_diff < -1.0:
             steering_direction = -1.0
-
+            
         return [engine_force, steering_direction]
 
+foo = math.pi
+template = f"math.pi = {math.pi}"
+sim.print(template)
+
 sim.load_environment("TestEnvironment")
-handle = sim.run_episode(BaselineAgent(), 20*60)
+handle = sim.run_episode(BaselineAgent(), 5*60)
 sim.print("Running episode for baseline agent.")
+
 
 while True:
     if handle.is_done():

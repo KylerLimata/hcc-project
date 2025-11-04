@@ -1,10 +1,12 @@
+mod pyinit;
+
 use std::f64::consts::{FRAC_PI_4, PI};
 use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
 use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
 use std::ffi::CString;
-use std::fs;
+use std::{env, fs};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
 use tokio::runtime::{Handle, Runtime};
@@ -84,6 +86,7 @@ impl PythonScriptRunner {
         };
         let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel();
         let handle: Handle = self.tokio_runtime.handle().clone();
+        let venv_path = pyinit::get_venv_path();
         self.msg_receiver = Some(rx);
 
         Python::initialize();
@@ -94,6 +97,8 @@ impl PythonScriptRunner {
             };
 
             match Python::attach(|py| {
+                pyinit::add_site_packages(py, &venv_path).expect("TODO: panic message");
+
                 let locals = PyDict::new(py);
                 locals.set_item("sim", simulation_runner)?;
 
