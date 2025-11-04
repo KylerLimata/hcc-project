@@ -1,12 +1,10 @@
-import math
-import numpy as np
-import keras
-
 class BaselineAgent:
     def __init__(self):
         pass
     
     def eval(self, inputs: list[float], state: list[float]):
+        import math
+
         # Unpack input vec
         left_distance = inputs[0]
         forward_distance = inputs[1]
@@ -26,20 +24,21 @@ class BaselineAgent:
 
         side_distance_diff = left_distance - right_distance
         steering_direction = 0.0
-        
-        if side_distance_diff > 1.0:
-            steering_direction = 1.0
-        elif side_distance_diff < -1.0:
+        side_distance_diff_normalized = max(-1.0, min(1.0, side_distance_diff / 5.0))
+        min_steering_angle = -30.0*(math.pi/180.0)
+        max_steering_angle = 30.0*(math.pi/180.0)
+        target_steering_angle = min_steering_angle + (side_distance_diff_normalized + 1.0) * ((max_steering_angle - min_steering_angle) / 2.0)
+        steering_angle_diff = steering_angle - target_steering_angle
+
+        if steering_angle_diff > 1.0*(math.pi/180.0):
             steering_direction = -1.0
+        elif steering_angle_diff < -1.0*(math.pi/180.0):
+            steering_direction = 1.0
             
         return [engine_force, steering_direction]
 
-template = f"np.pi = {np.pi}"
-sim.print(template)
-sim.print(f"keras.activations.celu = {keras.activations.celu}")
-
 sim.load_environment("TestEnvironment")
-handle = sim.run_episode(BaselineAgent(), 5*60)
+handle = sim.run_episode(BaselineAgent(), 20*60)
 sim.print("Running episode for baseline agent.")
 
 
