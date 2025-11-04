@@ -1,4 +1,6 @@
 import math
+import numpy as np
+import keras
 
 class BaselineAgent:
     def __init__(self):
@@ -32,9 +34,9 @@ class BaselineAgent:
             
         return [engine_force, steering_direction]
 
-foo = math.pi
-template = f"math.pi = {math.pi}"
+template = f"np.pi = {np.pi}"
 sim.print(template)
+sim.print(f"keras.activations.celu = {keras.activations.celu}")
 
 sim.load_environment("TestEnvironment")
 handle = sim.run_episode(BaselineAgent(), 5*60)

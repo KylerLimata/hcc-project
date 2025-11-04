@@ -8,7 +8,7 @@ pub fn get_venv_path() -> std::path::PathBuf {
     let ps = ProjectSettings::singleton();
     let project_root = ps.globalize_path(&GString::from("res://")).to_string();
 
-    PathBuf::from(project_root).join(".venv")
+    PathBuf::from(project_root).join("hcc-python")
 }
 
 pub fn add_site_packages(py: Python, venv_path: &Path) -> PyResult<()> {
