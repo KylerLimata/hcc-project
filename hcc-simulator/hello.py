@@ -37,8 +37,8 @@ class BaselineAgent:
             
         return [engine_force, steering_direction]
 
-sim.load_environment("TestEnvironment")
-handle = sim.run_episode(BaselineAgent(), 20*60)
+sim.load_environment("training_environment")
+handle = sim.run_episode(BaselineAgent(), 100*60)
 sim.print("Running episode for baseline agent.")
 
 
