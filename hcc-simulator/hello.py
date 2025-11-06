@@ -61,7 +61,7 @@ while True:
     if handle.is_done():
         break
 
-checkpoint_times, terminated = handle.get_result()
+baseline_checkpoint_times, terminated = handle.get_result()
 sim.print("Episode for baseline agent complete.")
 
 # Neural Network Agent
@@ -71,10 +71,13 @@ class NNAgent:
 
     model: keras.Model
 
-    def __init__(self, model: keras.Model):
+    def __init__(self, model: keras.Model, num_steering_actions: int, num_engine_actions: int):
         self.model = model
+        self.num_steering_actions = num_steering_actions
+        self.num_engine_actions = num_engine_actions
         self.steering_action_probs_history = []
         self.engine_action_probs_history = []
+        self.critic_value_history = []
 
     def eval(self, inputs: list[float], state: list[float]):
         full_state = inputs + state
@@ -82,13 +85,17 @@ class NNAgent:
         full_state = ops.expand_dims(state, 0)
 
         steering_action_probs, engine_action_probs, critic_value = model(full_state)
-        steering_action = np.random.choice(num_steering_actions, p=np.squeeze(steering_action_probs))
-        engine_action = np.random.choice(num_engine_actions, p=np.squeeze(engine_action_probs))
+        steering_action = np.random.choice(self.num_steering_actions, p=np.squeeze(steering_action_probs))
+        engine_action = np.random.choice(self.num_engine_actions, p=np.squeeze(engine_action_probs))
 
         self.steering_action_probs_history.append(ops.log(steering_action_probs[0, steering_action]))
         self.engine_action_probs_history.append(ops.log(engine_action_probs[0, engine_action]))
+        self.critic_value_history.append(critic_value[0, 0])
 
-        return [steering_action - 1.0, engine_action - 1.0]
+        engine_power = engine_action - 1.0
+        steering_direction = steering_action - 1.0
+
+        return [steering_direction, engine_power]
 
 # Setup actor critic network
 num_inputs = 5
@@ -107,7 +114,8 @@ model = keras.Model(inputs=inputs, outputs=[action_steering, action_engine, crit
 # Train neural network agent
 optimizer = keras.optimizers.Adam(learning_rate=0.01)
 huber_loss = keras.losses.Huber()
-action_probs_history = []
+steering_action_probs_history = []
+engine_action_probs_history = []
 critic_value_history = []
 rewards_history = []
 running_reward = 0
@@ -117,9 +125,29 @@ while episode_count < max_episodes:
     sim.load_environment("training_environment")
     episode_reward = 0
     
+    sim.print(f"Running training episode {episode_count + 1}.")
+
     with tf.GradientTape() as tape:
-        handle = sim.run_episode(NNAgent(model), max_seconds_per_episode*60)
+        # Create agent and run episode
+        agent = NNAgent(model, num_engine_actions, num_engine_actions)
+        handle = sim.run_episode(agent, max_seconds_per_episode*60)
 
         while True:
             if handle.is_done():
                 break
+
+        # Unpack histories
+        critic_value_history = agent.critic_value_history
+        steering_action_probs_history = agent.steering_action_probs_history
+        engine_action_probs_history = agent.engine_action_probs_history
+
+        # Compute reward for episode
+        checkpoint_times, terminated = handle.get_result()
+
+        for i in range(len(checkpoint_times)):
+            baseline_time = baseline_checkpoint_times[i]
+            nn_time = checkpoint_times[i]
+
+            episode_reward += nn_time - baseline_time
+    
+    episode_count += 1
