@@ -73,26 +73,36 @@ class NNAgent:
 
     def __init__(self, model: keras.Model):
         self.model = model
+        self.steering_action_probs_history = []
+        self.engine_action_probs_history = []
 
     def eval(self, inputs: list[float], state: list[float]):
-        tensor_state = ops.convert_to_tensor()
-        state = ops.expand_dims(state, 0)
+        full_state = inputs + state
+        full_state = ops.convert_to_tensor(full_state)
+        full_state = ops.expand_dims(state, 0)
 
-        action_probs, critic_value = model(state)
+        steering_action_probs, engine_action_probs, critic_value = model(full_state)
+        steering_action = np.random.choice(num_steering_actions, p=np.squeeze(steering_action_probs))
+        engine_action = np.random.choice(num_engine_actions, p=np.squeeze(engine_action_probs))
 
-        model
+        self.steering_action_probs_history.append(ops.log(steering_action_probs[0, steering_action]))
+        self.engine_action_probs_history.append(ops.log(engine_action_probs[0, engine_action]))
+
+        return [steering_action - 1.0, engine_action - 1.0]
 
 # Setup actor critic network
 num_inputs = 5
-num_actions = 2
+num_steering_actions = 3
+num_engine_actions = 3
 num_hidden = 128
 
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
-action = layers.Dense(num_actions, activation="softmax")(common)
+action_steering = layers.Dense(num_steering_actions, activation="softmax")(common)
+action_engine = layers.Dense(num_engine_actions, activation="softmax")(common)
 critic = layers.Dense(1)(common)
 
-model = keras.Model(inputs=inputs, outputs=[action, critic])
+model = keras.Model(inputs=inputs, outputs=[action_steering, action_engine, critic])
 
 # Train neural network agent
 optimizer = keras.optimizers.Adam(learning_rate=0.01)
@@ -108,7 +118,7 @@ while episode_count < max_episodes:
     episode_reward = 0
     
     with tf.GradientTape() as tape:
-        handle = sim.run_episode(NNAgent(), max_seconds_per_episode*60)
+        handle = sim.run_episode(NNAgent(model), max_seconds_per_episode*60)
 
         while True:
             if handle.is_done():
