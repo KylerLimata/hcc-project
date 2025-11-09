@@ -66,9 +66,6 @@ sim.print("Episode for baseline agent complete.")
 
 # Neural Network Agent
 class NNAgent:
-    import keras
-    from keras import ops
-
     model: keras.Model
 
     def __init__(self, model: keras.Model, num_steering_actions: int, num_engine_actions: int):
@@ -80,6 +77,9 @@ class NNAgent:
         self.critic_value_history = []
 
     def eval(self, inputs: list[float], state: list[float]):
+        import keras
+        from keras import ops
+
         full_state = inputs + state
         full_state = ops.convert_to_tensor(full_state)
         full_state = ops.expand_dims(state, 0)
