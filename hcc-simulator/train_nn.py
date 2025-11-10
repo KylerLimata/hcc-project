@@ -70,6 +70,7 @@ while episode_count < max_episodes:
     state_history = agent.state_history
     action_history = agent.action_history
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
+    rewards_history = [0]*end_step
 
     sim.print(f"len(checkpoint_times): {len(checkpoint_times)}")
 
@@ -84,15 +85,12 @@ while episode_count < max_episodes:
         steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
         engine_action_probs_history   = tf.gather(action_engine, engine_indices, axis=1, batch_dims=1)
 
+        # Fill rewards history
         for i in range(len(checkpoint_times)):
             baseline_time = baseline_checkpoint_times[i]
             nn_time = checkpoint_times[i]
             reward = nn_time - baseline_time
-
-            # Reward every step until it hits the checkpoint
-            while len(rewards_history) < nn_time:
-                rewards_history.append(reward)
-
+            rewards_history[nn_time] = reward
             episode_reward += reward
 
         # Update running reward to check condition for solving
@@ -167,12 +165,24 @@ while episode_count < max_episodes:
             sim.print(f"gradient computation failed: {e}")
             raise
         sim.print(" Applying gradients...")
+        none_count = sum(1 for g in grads if g is None)
+        sim.print(f"DEBUG: total grads = {len(grads)}, None grads = {none_count}")
+
+        for i, (g, v) in enumerate(zip(grads, model.trainable_variables)):
+            name = v.name
+            if g is None:
+                sim.print(f"[{i}] VAR {name}: grad = None, shape={v.shape}, dtype={v.dtype}")
+            else:
+                try:
+                    # eager numeric check
+                    s = float(tf.reduce_sum(tf.abs(g)).numpy())
+                    mn = float(tf.reduce_min(g).numpy())
+                    mx = float(tf.reduce_max(g).numpy())
+                    sim.print(f"[{i}] VAR {name}: grad shape={g.shape}, dtype={g.dtype}, sum_abs={s:.6g}, min={mn:.6g}, max={mx:.6g}")
+                except Exception as e:
+                    sim.print(f"[{i}] VAR {name}: grad present but numeric read failed: {e}")
+        
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        sim.print(f" gradients applied.")
 
-        # Clear the loss and reward history
-        steering_action_probs_history.clear()
-        engine_action_probs_history.clear()
-        critic_value_history.clear()
-        rewards_history.clear()
-
-    sim.print(f" reward: {episode_reward}")
+        sim.print(f" reward: {episode_reward}")
