@@ -10,6 +10,7 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 2
 max_episodes = 10
+eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Evaluate the baseline agent
 sim.load_environment("training_environment")
@@ -48,31 +49,40 @@ rewards_history = []
 running_reward = 0
 episode_count = 0
 
-sim.print("Here!")
-
 while episode_count < max_episodes:
     sim.load_environment("training_environment")
     episode_reward = 0
+    # Create agent and run episode to get states
+    agent = agents.NewFastNNAgent(model, num_steering_actions, num_engine_actions)
+    sim.print(f"Running training episode {episode_count + 1}.")
+    handle = sim.run_episode(agent, max_seconds_per_episode*60)
+
+    sim.print(" Running episode simulation.")
+
+    while True:
+        if handle.is_done():
+            break
+
+    sim.print(" Finished simulation")
+
+    # Upack results
+    checkpoint_times, terminated = handle.get_result()
+    state_history = agent.state_history
+    action_history = agent.action_history
+    states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
+
+    sim.print(f"len(checkpoint_times): {len(checkpoint_times)}")
 
     with tf.GradientTape() as tape:
-        # Create agent and run episode
-        agent = agents.FastNNAgent(model, num_steering_actions, num_engine_actions)
-        sim.print(f"Running training episode {episode_count + 1}.")
-        handle = sim.run_episode(agent, max_seconds_per_episode*60)
+        # Use actual model to calculate states, needed to compute gradients
+        action_steering, action_engine, critic_values = model(states_tf, training=True)
 
-        sim.print(" Episode started.")
+        # Extract chosen action probabilities
+        steering_indices = tf.constant([a[0] for a in agent.action_history], dtype=tf.int32)
+        engine_indices   = tf.constant([a[1] for a in agent.action_history], dtype=tf.int32)
 
-        while True:
-            if handle.is_done():
-                break
-
-        # Unpack histories
-        critic_value_history = agent.critic_value_history
-        steering_action_probs_history = agent.steering_action_probs_history
-        engine_action_probs_history = agent.engine_action_probs_history
-
-        # Compute reward for episode
-        checkpoint_times, terminated = handle.get_result()
+        steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
+        engine_action_probs_history   = tf.gather(action_engine, engine_indices, axis=1, batch_dims=1)
 
         for i in range(len(checkpoint_times)):
             baseline_time = baseline_checkpoint_times[i]
@@ -99,16 +109,27 @@ while episode_count < max_episodes:
         for r in rewards_history[::-1]:
             discounted_sum = r + gamma * discounted_sum
             returns.insert(0, discounted_sum)
+
+        sim.print(" normalizing returns...")
     
         # Normalize
         returns = np.array(returns)
         returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
         returns = returns.tolist()
 
+        sim.print(" computing loss...")
+
         # Calculating loss values to update our network
-        history = zip(steering_action_probs_history, engine_action_probs_history, critic_value_history, returns)
+        history = zip(steering_action_probs_history, engine_action_probs_history, critic_values, returns)
         actor_losses = []
         critic_losses = []
+
+        sim.print(f"len(steering_action_probs_history): {len(steering_action_probs_history)}")
+        sim.print(f"len(engine_action_probs_history): {len(engine_action_probs_history)}")
+        sim.print(f"critic_values shape: {getattr(critic_values, 'shape', None)}")
+        sim.print(f"len(returns): {len(returns)}")
+
+
         for log_prob_steering, log_prob_engine, value, ret in history:
             # At this point in history, the critic estimated that we would get a
             # total reward = `value` in the future. We took an action with log probability
@@ -125,8 +146,27 @@ while episode_count < max_episodes:
             )
         
         # Backpropagation
-        loss_value = sum(actor_losses) + sum(critic_losses)
-        grads = tape.gradient(loss_value, model.trainable_variables)
+        sim.print(f"actor_losses length: {len(actor_losses)}")
+        sim.print(f"critic_losses length: {len(critic_losses)}")
+
+        for i, (a, c) in enumerate(zip(actor_losses, critic_losses)):
+            sim.print(f"[{i}] actor_loss type={type(a)}, shape={getattr(a, 'shape', None)}")
+            sim.print(f"[{i}] critic_loss type={type(c)}, shape={getattr(c, 'shape', None)}")    
+        
+        sim.print(" Performing backpropagation...")
+        loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses)
+        sim.print(f"loss_value dtype/shape: {type(loss_value)}, {getattr(loss_value,'shape',None)}")
+        try:
+            tf.debugging.check_numerics(loss_value, "Loss has NaN/Inf")
+        except Exception as e:
+            sim.print(f"Loss numerics check failed: {e}")
+        sim.print(" Computing gradients...")
+        try:
+            grads = tape.gradient(loss_value, model.trainable_variables)
+        except Exception as e:
+            sim.print(f"gradient computation failed: {e}")
+            raise
+        sim.print(" Applying gradients...")
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         # Clear the loss and reward history
