@@ -22,7 +22,7 @@ while True:
     if handle.is_done():
         break
 
-baseline_checkpoint_times, terminated = handle.get_result()
+baseline_checkpoint_times, _, _ = handle.get_result()
 sim.print("Episode for baseline agent complete.")
 
 # Setup actor critic network
@@ -66,7 +66,7 @@ while episode_count < max_episodes:
     sim.print(" Finished simulation")
 
     # Upack results
-    checkpoint_times, terminated = handle.get_result()
+    checkpoint_times, terminated, end_step = handle.get_result()
     state_history = agent.state_history
     action_history = agent.action_history
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
