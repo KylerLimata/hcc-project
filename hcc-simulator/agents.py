@@ -56,6 +56,7 @@ class NNAgent:
         # Precompile model call with fixed input signature
         self._eval_model = tf.function(
             self.model,
+            jit_compile=True,
             input_signature=[tf.TensorSpec(shape=(1, 5), dtype=tf.float32)],
         )
 
@@ -79,3 +80,92 @@ class NNAgent:
         steering_direction = steering_action - 1.0
 
         return [steering_direction, engine_power]
+
+class FastNNAgent:
+    def __init__(
+            self, 
+            model, 
+            num_steering_actions: int, 
+            num_engine_actions: int
+            ):
+        import tensorflow as tf
+        # Upack model weights
+        # Weights evaluated with numpy for performance
+        layers = model.layers
+
+        self.hidden_layers = []
+        for layer in layers:
+            if isinstance(layer, tf.keras.layers.Dense) and "out" not in layer.name:
+                weights = layer.get_weights()
+                if len(weights) == 2:
+                    self.hidden_layers.append((weights[0], weights[1], layer.activation))
+
+        self.output_layers = []
+        for layer in layers:
+            if isinstance(layer, tf.keras.layers.Dense) and "out" in layer.name:
+                weights = layer.get_weights()
+                if len(weights) == 2:
+                    self.output_layers.append((weights[0], weights[1], layer.activation))
+        
+        self.num_steering_actions = num_steering_actions
+        self.num_engine_actions = num_engine_actions
+        self.steering_action_probs_history = []
+        self.engine_action_probs_history = []
+        self.critic_value_history = []
+
+    def apply_activation(self, x, activation):
+        import tensorflow as tf
+        import numpy as np
+
+        if activation == tf.keras.activations.relu:
+            return np.maximum(0, x)
+        elif activation == tf.keras.activations.tanh:
+            return np.tanh(x)
+        elif activation == tf.keras.activations.sigmoid:
+            return 1 / (1 + np.exp(-x))
+        elif activation == tf.keras.activations.linear:
+            return x
+        elif activation == tf.keras.activations.softmax:
+            # Stable softmax
+            z = x - np.max(x, axis=-1, keepdims=True)
+            e = np.exp(z)
+            return e / np.sum(e, axis=-1, keepdims=True)
+        else:
+            raise NotImplementedError(f"Unsupported activation: {activation}")
+    
+    def eval(self, inputs: list[float], state: list[float]):
+        import numpy as np
+
+        # Convert inputs and state into single numpy array
+        x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+        
+        # Forward pass through hidden layers
+        for W, b, activation in self.hidden_layers:
+            xprime = np.dot(x, W) + b
+            x = self.apply_activation(xprime, activation)
+        
+        # Forward pass through outputs
+        Y = []
+        for W, b, activation in self.output_layers:
+            yprime = np.dot(x, W) + b
+            y = self.apply_activation(yprime, activation)
+            Y.append(y[0])
+
+        steering_action_probs = Y[0]
+        engine_action_probs = Y[1]
+        critic_value = Y[2]
+
+        # Sample actions
+        steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
+        engine_action = np.random.choice(self.num_engine_actions, p=engine_action_probs)
+
+        # Log probabilities and update histories
+        self.steering_action_probs_history.append(np.log(steering_action_probs[steering_action]))
+        self.engine_action_probs_history.append(np.log(engine_action_probs[engine_action]))
+        self.critic_value_history.append(critic_value)
+
+        engine_power = engine_action - 1.0
+        steering_direction = steering_action - 1.0
+
+        return [engine_power, steering_direction]
+    

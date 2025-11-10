@@ -32,9 +32,9 @@ num_hidden = 128
 
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
-action_steering = layers.Dense(num_steering_actions, activation="softmax")(common)
-action_engine = layers.Dense(num_engine_actions, activation="softmax")(common)
-critic = layers.Dense(1)(common)
+action_steering = layers.Dense(num_steering_actions, activation="softmax", name = "steering_out")(common)
+action_engine = layers.Dense(num_engine_actions, activation="softmax", name = "engine_out")(common)
+critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 
 model = keras.Model(inputs=inputs, outputs=[action_steering, action_engine, critic])
 
@@ -53,12 +53,11 @@ sim.print("Here!")
 while episode_count < max_episodes:
     sim.load_environment("training_environment")
     episode_reward = 0
-    
-    sim.print(f"Running training episode {episode_count + 1}.")
 
     with tf.GradientTape() as tape:
         # Create agent and run episode
-        agent = agents.NNAgent(model, num_engine_actions, num_engine_actions)
+        agent = agents.FastNNAgent(model, num_steering_actions, num_engine_actions)
+        sim.print(f"Running training episode {episode_count + 1}.")
         handle = sim.run_episode(agent, max_seconds_per_episode*60)
 
         sim.print(" Episode started.")
