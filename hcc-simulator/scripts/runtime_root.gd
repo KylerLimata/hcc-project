@@ -12,8 +12,12 @@ var terminated: bool = false
 var finished: bool = false
 
 func load_environment(env_name: String):
+	if current_environment != null:
+		remove_child(current_environment)
+	
 	var scene = load("res://scenes/environments/" + env_name + ".tscn").instantiate()
 	current_environment = scene
+	current_environment.connect("checkpoint_activated", on_checkpoint_activated)
 	add_child(scene)
 
 func evaluate_agent(agent: PythonAgent):
@@ -32,7 +36,6 @@ func _physics_process(_delta: float) -> void:
 			var scene = load("res://scenes/agent.tscn").instantiate()
 			current_agent_node = scene
 			current_environment.add_child(current_agent_node)
-			current_environment.connect("checkpoint_activated", on_checkpoint_activated)
 			current_agent_node.agent = current_agent
 			checkpoint_times = []
 			terminated = false
