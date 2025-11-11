@@ -8,7 +8,7 @@ import agents
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
-max_seconds_per_episode = 2
+max_seconds_per_episode = 5
 max_episodes = 10
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
@@ -110,39 +110,41 @@ while episode_count < max_episodes:
 
             if delta_speed == 0:
                 # Penalize for not moving
-                reward -= 1.0
+                reward -= 20.0
             if delta_speed < 0:
                 if next_speed <= 0:
                     # Penalize going backwards or not moving
-                    reward -= 1.0
+                    reward -= 2.0
                 else:
                     if forward_distance < 5.0:
                         # reward for slowing down when approaching wall
-                        reward += 1.0
+                        reward += 2.0
                     else:
                         # penalize for slowing down when not approaching wall
-                        reward -= 1.0
+                        reward -= 2.0
             else:
                 if forward_distance < 5.0:
                     # penalize for not slowing downe when approaching wall
-                    reward -= 1.0
+                    reward -= 2.0
                 else:
                     # reward for not slowing down when not approaching wall
-                    reward += 1.0
+                    reward += 2.0
             
             # Steering
             delta_steering_angle = next_steering_angle - steering_angle
             side_distance_diff = left_distance - right_distance
+            # Define tolerance for "centered"
+            center_tolerance = 0.1
             
             # left distance > right_distance
-            if side_distance_diff > 0.1:
+            if side_distance_diff > center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Reward for steering left when close to a right wall
                     reward += 1.0
                 elif delta_steering_angle > 0.0:
                     # Penalize for steering right when close to right wall
                     reward -= 1.0
-            if side_distance_diff < -0.1:
+            elif side_distance_diff < -center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Penalize for steering left when close to a left wall
                     reward -= 1.0
@@ -151,7 +153,7 @@ while episode_count < max_episodes:
                     reward += 1.0
             else:
                 # Penalize for steering towards wall in straight sections
-                reward -= 1.0
+                reward -= 0.1 * abs(steering_angle)
             
             rewards_history[i] = reward
         
