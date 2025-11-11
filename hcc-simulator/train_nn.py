@@ -56,22 +56,16 @@ while episode_count < max_episodes:
     sim.print(f"Running training episode {episode_count + 1}.")
     handle = sim.run_episode(agent, max_seconds_per_episode*60)
 
-    sim.print(" Running episode simulation.")
-
     while True:
         if handle.is_done():
             break
-
-    sim.print(" Finished simulation")
 
     # Upack results
     checkpoint_times, terminated, end_step = handle.get_result()
     state_history = agent.state_history
     action_history = agent.action_history
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
-    rewards_history = [0]*end_step
-
-    sim.print(f"len(checkpoint_times): {len(checkpoint_times)}")
+    rewards_history = [0.0]*end_step
 
     with tf.GradientTape() as tape:
         # Use actual model to calculate states, needed to compute gradients
@@ -84,13 +78,85 @@ while episode_count < max_episodes:
         steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
         engine_action_probs_history   = tf.gather(action_engine, engine_indices, axis=1, batch_dims=1)
 
-        # Fill rewards history
+        # Fill out rewards history
+        # - Reward the agent for getting to a checkpoint faster than baseline
         for i in range(len(checkpoint_times)):
             baseline_time = baseline_checkpoint_times[i]
             nn_time = checkpoint_times[i]
-            reward = nn_time - baseline_time
+            reward = np.max([nn_time - baseline_time, 0])
             rewards_history[nn_time] = reward
-            episode_reward += reward
+        
+        # - Rewards based on state
+        for i in range(len(agent.state_history) - 1):
+            state = agent.state_history[i]
+            next_state = agent.state_history[i + 1]
+            # Inputs
+            left_distance = state[0]
+            next_left_distance = next_state[0]
+            forward_distance = state[1]
+            next_forward_distance = next_state[1]
+            right_distance = state[2]
+            next_right_distance = next_state[2]
+            # State
+            speed = state[3]
+            next_speed = next_state[3]
+            steering_angle = state[4]
+            next_steering_angle = next_state[4]
+
+            reward = rewards_history[i]
+
+            # Speed
+            delta_speed = next_speed - speed
+
+            if delta_speed == 0:
+                # Penalize for not moving
+                reward -= 1.0
+            if delta_speed < 0:
+                if next_speed <= 0:
+                    # Penalize going backwards or not moving
+                    reward -= 1.0
+                else:
+                    if forward_distance < 5.0:
+                        # reward for slowing down when approaching wall
+                        reward += 1.0
+                    else:
+                        # penalize for slowing down when not approaching wall
+                        reward -= 1.0
+            else:
+                if forward_distance < 5.0:
+                    # penalize for not slowing downe when approaching wall
+                    reward -= 1.0
+                else:
+                    # reward for not slowing down when not approaching wall
+                    reward += 1.0
+            
+            # Steering
+            delta_steering_angle = next_steering_angle - steering_angle
+            side_distance_diff = left_distance - right_distance
+            
+            # left distance > right_distance
+            if side_distance_diff > 0.1:
+                if delta_steering_angle < 0.0:
+                    # Reward for steering left when close to a right wall
+                    reward += 1.0
+                elif delta_steering_angle > 0.0:
+                    # Penalize for steering right when close to right wall
+                    reward -= 1.0
+            if side_distance_diff < -0.1:
+                if delta_steering_angle < 0.0:
+                    # Penalize for steering left when close to a left wall
+                    reward -= 1.0
+                elif delta_steering_angle > 0.0:
+                    # Reward for steering right when close to left wall
+                    reward += 1.0
+            else:
+                # Penalize for steering towards wall in straight sections
+                reward -= 1.0
+            
+            rewards_history[i] = reward
+        
+        for r in rewards_history:
+            episode_reward += r
 
         # Update running reward to check condition for solving
         running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward
@@ -107,25 +173,18 @@ while episode_count < max_episodes:
             discounted_sum = r + gamma * discounted_sum
             returns.insert(0, discounted_sum)
 
-        sim.print(" normalizing returns...")
+        sim.print(f"len(rewards_history) = {len(rewards_history)}")
+        sim.print(f"len(returns) = {len(returns)}")
     
         # Normalize
         returns = np.array(returns)
         returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
         returns = returns.tolist()
 
-        sim.print(" computing loss...")
-
         # Calculating loss values to update our network
         history = zip(steering_action_probs_history, engine_action_probs_history, critic_values, returns)
         actor_losses = []
         critic_losses = []
-
-        sim.print(f"len(steering_action_probs_history): {len(steering_action_probs_history)}")
-        sim.print(f"len(engine_action_probs_history): {len(engine_action_probs_history)}")
-        sim.print(f"critic_values shape: {getattr(critic_values, 'shape', None)}")
-        sim.print(f"len(returns): {len(returns)}")
-
 
         for log_prob_steering, log_prob_engine, value, ret in history:
             # At this point in history, the critic estimated that we would get a
@@ -143,26 +202,9 @@ while episode_count < max_episodes:
             )
         
         # Backpropagation
-        sim.print(f"actor_losses length: {len(actor_losses)}")
-        sim.print(f"critic_losses length: {len(critic_losses)}")
-
-        for i, (a, c) in enumerate(zip(actor_losses, critic_losses)):
-            sim.print(f"[{i}] actor_loss type={type(a)}, shape={getattr(a, 'shape', None)}")
-            sim.print(f"[{i}] critic_loss type={type(c)}, shape={getattr(c, 'shape', None)}")    
-        
-        sim.print(" Performing backpropagation...")
         loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses)
-        sim.print(f"loss_value dtype/shape: {type(loss_value)}, {getattr(loss_value,'shape',None)}")
-        try:
-            tf.debugging.check_numerics(loss_value, "Loss has NaN/Inf")
-        except Exception as e:
-            sim.print(f"Loss numerics check failed: {e}")
         sim.print(" Computing gradients...")
-        try:
-            grads = tape.gradient(loss_value, model.trainable_variables)
-        except Exception as e:
-            sim.print(f"gradient computation failed: {e}")
-            raise
+        grads = tape.gradient(loss_value, model.trainable_variables)
         sim.print(" Applying gradients...")
         none_count = sum(1 for g in grads if g is None)
         sim.print(f"DEBUG: total grads = {len(grads)}, None grads = {none_count}")
