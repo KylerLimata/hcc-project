@@ -8,22 +8,12 @@ import agents
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
-max_seconds_per_episode = 5
+max_seconds_per_episode = 30
 max_episodes = 10
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
-# Evaluate the baseline agent
-sim.load_environment("training_environment")
-handle = sim.run_episode(agents.BaselineAgent(), max_seconds_per_episode*60)
-sim.print("Running episode for baseline agent.")
-
-
-while True:
-    if handle.is_done():
-        break
-
-baseline_checkpoint_times, _, _ = handle.get_result()
-sim.print("Episode for baseline agent complete.")
+# Load baseline checkpoint times
+baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
 
 # Setup actor critic network
 num_inputs = 5
@@ -48,6 +38,8 @@ critic_value_history = []
 rewards_history = []
 running_reward = 0
 episode_count = 0
+
+sim.load_environment("training_environment")
 
 while episode_count < max_episodes:
     episode_reward = 0
@@ -108,27 +100,27 @@ while episode_count < max_episodes:
             # Speed
             delta_speed = next_speed - speed
 
-            if delta_speed == 0:
-                # Penalize for not moving
-                reward -= 20.0
-            if delta_speed < 0:
-                if next_speed <= 0:
-                    # Penalize going backwards or not moving
-                    reward -= 2.0
-                else:
-                    if forward_distance < 5.0:
-                        # reward for slowing down when approaching wall
-                        reward += 2.0
-                    else:
-                        # penalize for slowing down when not approaching wall
-                        reward -= 2.0
-            else:
-                if forward_distance < 5.0:
-                    # penalize for not slowing downe when approaching wall
-                    reward -= 2.0
-                else:
-                    # reward for not slowing down when not approaching wall
-                    reward += 2.0
+            # if delta_speed == 0 and speed == 0:
+            #     # Penalize for not moving
+            #     reward -= 1000.0
+            # if delta_speed < 0:
+            #     if next_speed <= 0:
+            #         # Penalize going backwards or not moving
+            #         reward -= 100.0
+            #     else:
+            #         if forward_distance < 5.0:
+            #             # reward for slowing down when approaching wall
+            #             reward += 2.0
+            #         else:
+            #             # penalize for slowing down when not approaching wall
+            #             reward -= 2.0*(5 - forward_distance)
+            # else:
+            #     if forward_distance < 5.0:
+            #         # penalize for not slowing downe when approaching wall
+            #         reward -= 2.0*(5 - forward_distance)
+            #     else:
+            #         # reward for not slowing down when not approaching wall
+            #         reward += 2.0
             
             # Steering
             delta_steering_angle = next_steering_angle - steering_angle
@@ -140,20 +132,25 @@ while episode_count < max_episodes:
             if side_distance_diff > center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Reward for steering left when close to a right wall
-                    reward += 1.0
+                    reward += 1.0*(5 - left_distance)
                 elif delta_steering_angle > 0.0:
                     # Penalize for steering right when close to right wall
-                    reward -= 1.0
+                    reward -= 1.0*(5 - right_distance)
             elif side_distance_diff < -center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Penalize for steering left when close to a left wall
-                    reward -= 1.0
+                    reward -= 1.0*(5 - left_distance)
                 elif delta_steering_angle > 0.0:
                     # Reward for steering right when close to left wall
-                    reward += 1.0
+                    reward += 1.0*(5 - left_distance)
             else:
                 # Penalize for steering towards wall in straight sections
                 reward -= 0.1 * abs(steering_angle)
+
+            if delta_speed <= 0 and speed <= 0:
+                # Override rewards and impose massive penalty
+                # for staying still or moving backwards
+                reward = -5000.0
             
             rewards_history[i] = reward
         
