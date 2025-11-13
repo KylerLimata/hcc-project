@@ -132,7 +132,7 @@ while episode_count < max_episodes:
             if side_distance_diff > center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Reward for steering left when close to a right wall
-                    reward += 1.0*(5 - left_distance)
+                    reward += 1.0*(5 - right_distance)
                 elif delta_steering_angle > 0.0:
                     # Penalize for steering right when close to right wall
                     reward -= 1.0*(5 - right_distance)
