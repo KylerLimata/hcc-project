@@ -99,55 +99,62 @@ while episode_count < max_episodes:
             steering_angle = state[4]
             next_steering_angle = next_state[4]
 
+            # Initialize reward
             reward = 0.0
 
+            # --- Base checkpoint reward ---
             if j < len(checkpoint_times) and i > checkpoint_times[j]:
                 j += 1
 
-            # Calculate base reward from checkpoint time
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward = np.max([nn_time - baseline_time, 0])
+                reward = np.maximum(nn_time - baseline_time, 0)
 
-            # Compute rewards and penalities
-            delta_speed = next_speed - speed
-            delta_steering_angle = next_steering_angle - steering_angle
-            side_distance_diff = left_distance - right_distance
-            next_side_distance_diff = next_left_distance - next_right_distance
-            center_tolerance = 0.1
+            # --- Backward or zero speed penalty ---
+            if speed <= 0.0:
+                reward = -1000.0  # catastrophic negative reward
+            else:
+                # --- Forward-only reward calculations ---
+                
+                # Steering alignment toward center
+                delta_steering_angle = next_steering_angle - steering_angle
+                side_distance_diff = left_distance - right_distance
+                center_tolerance = 0.1
+                max_dist = 5.0
 
-            # Car should probably be turning
-            if abs(side_distance_diff) > center_tolerance and speed > 0.0:
-                if side_distance_diff > 0.0:
-                    if delta_steering_angle >= 0.0:
-                        reward -= 2.0 + 0.5*(5 - right_distance)
-                    else:
-                        reward += 2.0
-                elif side_distance_diff < 0.0:
-                    if delta_steering_angle <= 0.0:
-                        reward -= 2.0 + 0.5*(5 - left_distance)
-                    else:
-                        reward += 2.0
-            elif delta_steering_angle > 0.2:
-                reward -= 1.0
+                if abs(side_distance_diff) > center_tolerance:
+                    desired_steering_direction = -side_distance_diff
+                    alignment = delta_steering_angle * desired_steering_direction
+                    reward += alignment
 
-            # Reward based on change in forward distance
-            if speed > 0.0:
-                reward += 1.0 * (next_forward_distance - forward_distance)
+                # Wall-aware steering
+                if right_distance < max_dist:
+                    if delta_steering_angle > 0:  # steering toward wall
+                        reward -= 0.5 * (max_dist - right_distance)
+                    elif delta_steering_angle < 0:
+                        reward += 0.5 * (max_dist - right_distance)
 
-            # Small reward based on speed
-            reward += 0.3 * speed
+                if left_distance < max_dist:
+                    if delta_steering_angle < 0:  # steering toward wall
+                        reward -= 0.5 * (max_dist - left_distance)
+                    elif delta_steering_angle > 0:
+                        reward += 0.5 * (max_dist - left_distance)
 
-            # Reward being near center
-            reward += 0.2 * (5 - abs(side_distance_diff))
+                # Forward progress reward
+                reward += (next_forward_distance - forward_distance) * 1.0
+                reward += 0.5 * speed
 
-            if speed < 0:
-                reward -= 5.0
+                # Centering reward
+                reward += 0.2 * (max_dist - abs(side_distance_diff))
 
+            # Terminal penalty
             if i == len(state_history) - 2 and terminated:
-                reward -= 200.0 + (max_seconds_per_episode*60 - i) * 0.5
+                remaining_time = max_seconds_per_episode * 60 - i
+                reward -= 200.0 + 0.5 * remaining_time
 
+            # Clip reward
+            reward = np.clip(reward, -500.0, 500.0)
             rewards_history[i] = reward
         
         for r in rewards_history:
