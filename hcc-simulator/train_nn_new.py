@@ -117,25 +117,25 @@ while episode_count < max_episodes:
             next_side_distance_diff = next_left_distance - next_right_distance
             center_tolerance = 0.1
 
-            # Car should be turning
-            if abs(side_distance_diff) > center_tolerance:
+            # Car should probably be turning
+            if abs(side_distance_diff) > center_tolerance and forward_distance < 5.0:
                 # Reward based on change in forward distance
                 if speed > 0.0:
                     reward += 0.05 * (next_forward_distance - forward_distance)
 
                 # Penalize steering right when close to right wall
                 if side_distance_diff > center_tolerance and delta_steering_angle >= 0.0:
-                    reward -= 1.0*(5 - right_distance)
+                    reward -= 0.5*(5 - right_distance)
                 # Penalize steering left when close to left wall
                 elif side_distance_diff < -center_tolerance and delta_steering_angle <= 0.0:
-                    reward -= 1.0*(5 - left_distance)
-            # Car should be going straight
+                    reward -= 0.5*(5 - left_distance)
+            # Car should probably be going straight
             else:
                 # Small reward based on speed
                 reward += 0.05 * speed
 
                 # Penalize unnecessary steering
-                if abs(delta_steering_angle) > 0.01:
+                if abs(delta_steering_angle) > 0.1:
                     reward -= 1.0
 
             rewards_history[i] = reward
