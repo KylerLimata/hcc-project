@@ -118,25 +118,35 @@ while episode_count < max_episodes:
             center_tolerance = 0.1
 
             # Car should probably be turning
-            if abs(side_distance_diff) > center_tolerance and forward_distance < 5.0:
-                # Reward based on change in forward distance
-                if speed > 0.0:
-                    reward += 0.05 * (next_forward_distance - forward_distance)
+            if abs(side_distance_diff) > center_tolerance and speed > 0.0:
+                if side_distance_diff > 0.0:
+                    if delta_steering_angle >= 0.0:
+                        reward -= 2.0 + 0.5*(5 - right_distance)
+                    else:
+                        reward += 2.0
+                elif side_distance_diff < 0.0:
+                    if delta_steering_angle <= 0.0:
+                        reward -= 2.0 + 0.5*(5 - left_distance)
+                    else:
+                        reward += 2.0
+            elif delta_steering_angle > 0.2:
+                reward -= 1.0
 
-                # Penalize steering right when close to right wall
-                if side_distance_diff > center_tolerance and delta_steering_angle >= 0.0:
-                    reward -= 0.5*(5 - right_distance)
-                # Penalize steering left when close to left wall
-                elif side_distance_diff < -center_tolerance and delta_steering_angle <= 0.0:
-                    reward -= 0.5*(5 - left_distance)
-            # Car should probably be going straight
-            else:
-                # Small reward based on speed
-                reward += 0.05 * speed
+            # Reward based on change in forward distance
+            if speed > 0.0:
+                reward += 1.0 * (next_forward_distance - forward_distance)
 
-                # Penalize unnecessary steering
-                if abs(delta_steering_angle) > 0.1:
-                    reward -= 1.0
+            # Small reward based on speed
+            reward += 0.3 * speed
+
+            # Reward being near center
+            reward += 0.2 * (5 - abs(side_distance_diff))
+
+            if speed < 0:
+                reward -= 5.0
+
+            if i == len(state_history) - 2 and terminated:
+                reward -= 200.0 + (max_seconds_per_episode*60 - i) * 0.5
 
             rewards_history[i] = reward
         
