@@ -121,6 +121,7 @@ transform = Transform3D(0.9659257, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.965
 final = true
 
 [node name="Back Wall" type="StaticBody3D" parent="."]
+collision_layer = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Back Wall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -2.125)

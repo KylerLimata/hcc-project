@@ -9,7 +9,7 @@ script = ExtResource("1_eb81t")
 
 [node name="Ground" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.125, 0)
-collision_mask = 3
+collision_layer = 2
 
 [node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="Ground"]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
@@ -23,7 +23,7 @@ depth = 0.25
 material = ExtResource("2_iml1p")
 
 [node name="LeftWall" type="StaticBody3D" parent="."]
-collision_mask = 3
+collision_layer = 2
 
 [node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="LeftWall"]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.375, 0)
@@ -38,7 +38,7 @@ material = ExtResource("2_yodu8")
 
 [node name="RightWall" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0)
-collision_mask = 3
+collision_layer = 2
 
 [node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="RightWall"]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)

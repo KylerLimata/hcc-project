@@ -189,9 +189,17 @@ impl AgentVehicleBody {
     }
 
     #[func]
-    fn update_raycast_distances(&mut self, distances    : Array<f64>) {
+    fn on_body_entered(&mut self, node: Gd<Node3D>) {
+        self.signals().on_collide().emit()
+    }
+
+    #[func]
+    fn update_raycast_distances(&mut self, distances: Array<f64>) {
         self.distances = distances.iter_shared().collect();
     }
+
+    #[signal]
+    fn on_collide();
 }
 
 #[derive(GodotClass)]

@@ -37,6 +37,7 @@ func _physics_process(_delta: float) -> void:
 			current_agent_node = scene
 			current_environment.add_child(current_agent_node)
 			current_agent_node.agent = current_agent
+			current_agent_node.on_collide.connect(on_agent_collide)
 			checkpoint_times = []
 			terminated = false
 			finished = false
@@ -63,3 +64,7 @@ func on_checkpoint_activated(final: bool):
 	
 	if final:
 		finished = true
+
+func on_agent_collide():
+	terminated = true
+	finished = true

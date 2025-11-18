@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://02wyi1fbh0k5"]
+[gd_scene load_steps=8 format=3 uid="uid://02wyi1fbh0k5"]
 
 [ext_resource type="Script" uid="uid://csobov0778dfu" path="res://scripts/raycasts.gd" id="1_b2pv0"]
 
@@ -21,10 +21,14 @@ top_radius = 0.25
 bottom_radius = 0.25
 height = 0.25
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_b2pv0"]
+size = Vector3(1.05, 0.55, 2.05)
+
 [node name="AgentVehicleBody" type="AgentVehicleBody"]
-collision_layer = 2
+collision_mask = 2
 axis_lock_angular_x = true
 axis_lock_angular_z = true
+continuous_cd = true
 
 [node name="BodyCollision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -100,4 +104,12 @@ target_position = Vector3(0, 0, 5)
 transform = Transform3D(0.49999997, 0, 0.86602545, 0, 1, 0, -0.86602545, 0, 0.49999997, 0, 0, 0)
 target_position = Vector3(0, 0, 5)
 
+[node name="CollisionDetection" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+collision_mask = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CollisionDetection"]
+shape = SubResource("BoxShape3D_b2pv0")
+
 [connection signal="update_raycast_distances" from="Raycasts" to="." method="update_raycast_distances"]
+[connection signal="body_entered" from="CollisionDetection" to="." method="on_body_entered"]
