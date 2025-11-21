@@ -1,6 +1,6 @@
 mod pyinit;
 
-use std::f64::consts::{FRAC_PI_4, PI};
+use std::f32::consts::{FRAC_PI_4, PI};
 use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
 use pyo3::types::{PyDict, PyDictMethods, PyTuple};
@@ -12,7 +12,7 @@ use std::sync::{mpsc, Arc, Condvar, Mutex};
 use tokio::runtime::{Handle, Runtime};
 use tokio::task::JoinHandle;
 
-const DEGREES_30_RADIANS: f64 = 30.0 * PI / 180.0;
+const DEGREES_30_RADIANS: f32 = 30.0 * PI / 180.0;
 
 struct HCCPythonRunnerExtension;
 
@@ -159,23 +159,25 @@ impl IVehicleBody3D for AgentVehicleBody {
         let velocity = self.base().get_linear_velocity();
         let forward = global_transform.basis.col_c();
         let speed = velocity.dot(forward) as f64;
-        let steering_angle = self.base_mut().get_steering() as f64;
+        let steering_angle = self.base_mut().get_steering();
 
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
                 let distances = if self.distances.is_empty() { vec![5.0, 5.0, 5.0] } else { self.distances.clone() };
-                let state = vec![speed, steering_angle];
+                let state = vec![speed, steering_angle as f64];
                 let args = (distances, state);
                 let pyclass = agent.bind_mut();
 
                 pyclass.agent.call_method1(py, "eval", args).unwrap().extract(py).unwrap()
             });
 
-            let engine_force_multiplier = outputs.get(0).unwrap();
-            let steering_direction = outputs.get(1).unwrap().clamp(-1.0, 1.0) as f64;
-            let steering_angle = steering_angle + steering_direction*PI/180.0;
+            let engine_power = outputs.get(0).unwrap().clamp(0.0, 1.0);
+            let breaking_power = outputs.get(1).unwrap().clamp(0.0, 1.0);
+            let steering_power = outputs.get(2).unwrap().clamp(-1.0, 1.0);
+            let steering_angle = steering_angle + steering_power * PI/180.0;
 
-            self.base_mut().set_engine_force(*engine_force_multiplier*25.0);
+            self.base_mut().set_engine_force(engine_power*25.0);
+            (self).base_mut().set_brake(breaking_power*5.0);
             self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS) as f32);
         }
     }
