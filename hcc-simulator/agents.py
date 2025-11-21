@@ -15,15 +15,16 @@ class BaselineAgent:
 
         target_speed = 20*(forward_distance)
         speed_diff = speed - target_speed
-        engine_force = 0.0
+        engine_power = 0.0
+        breaking_power = 0.0
 
         if speed_diff < 1.0:
-            engine_force = 1.0
+            engine_power = 1.0
         elif speed_diff > 1.0:
-            engine_force = -1.0
+            breaking_power = 1.0
 
         side_distance_diff = left_distance - right_distance
-        steering_direction = 0.0
+        steering_power = 0.0
         side_distance_diff_normalized = max(-1.0, min(1.0, side_distance_diff / 5.0))
         min_steering_angle = -30.0*(math.pi/180.0)
         max_steering_angle = 30.0*(math.pi/180.0)
@@ -31,11 +32,11 @@ class BaselineAgent:
         steering_angle_diff = steering_angle - target_steering_angle
 
         if steering_angle_diff > 1.0*(math.pi/180.0):
-            steering_direction = -1.0
+            steering_power = -1.0
         elif steering_angle_diff < -1.0*(math.pi/180.0):
-            steering_direction = 1.0
+            steering_power = 1.0
             
-        return [engine_force, steering_direction]
+        return [engine_power, breaking_power, steering_power]
     
 class NNAgent:
     def __init__(self, model, num_steering_actions: int, num_engine_actions: int):
