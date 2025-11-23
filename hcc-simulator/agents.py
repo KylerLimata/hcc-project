@@ -158,17 +158,23 @@ class FastNNAgent:
 
         # Sample actions
         steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
-        engine_action = np.random.choice(self.num_engine_actions, p=engine_action_probs)
+        pedal_action = np.random.choice(self.num_engine_actions, p=engine_action_probs)
 
         # Log probabilities and update histories
         self.steering_action_probs_history.append(np.log(steering_action_probs[steering_action]))
-        self.engine_action_probs_history.append(np.log(engine_action_probs[engine_action]))
+        self.engine_action_probs_history.append(np.log(engine_action_probs[pedal_action]))
         self.critic_value_history.append(critic_value)
 
-        engine_power = engine_action - 1.0
-        steering_direction = steering_action - 1.0
+        engine_power = 0.0
+        breaking_power = 0.0
+        steering_power = steering_action - 1.0
 
-        return [engine_power, steering_direction]
+        if pedal_action == 1:
+            engine_power = 1.0
+        elif pedal_action == 2:
+            breaking_power = 1.0
+
+        return [engine_power, breaking_power, steering_power]
     
 
 class NewFastNNAgent:
@@ -246,14 +252,20 @@ class NewFastNNAgent:
 
         # Sample actions
         steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
-        engine_action = np.random.choice(self.num_engine_actions, p=engine_action_probs)
+        pedal_action = np.random.choice(self.num_engine_actions, p=engine_action_probs)
 
         # Update histories
         self.state_history.append(inputs + state)
-        self.action_history.append((steering_action, engine_action))
+        self.action_history.append((steering_action, pedal_action))
 
-        engine_power = engine_action - 1.0
-        steering_direction = steering_action - 1.0
+        engine_power = 0.0
+        breaking_power = 0.0
+        steering_power = steering_action - 1.0
 
-        return [engine_power, steering_direction]
+        if pedal_action == 1:
+            engine_power = 1.0
+        elif pedal_action == 2:
+            breaking_power = 1.0
+
+        return [engine_power, breaking_power, steering_power]
     

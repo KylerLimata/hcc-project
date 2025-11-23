@@ -9,7 +9,7 @@ import agents
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 30
-max_episodes = 15
+max_episodes = 1
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -111,50 +111,9 @@ while episode_count < max_episodes:
                 nn_time = checkpoint_times[j]
                 reward = np.maximum(nn_time - baseline_time, 0)
 
-            # --- Backward or zero speed penalty ---
-            if speed <= 0.0:
-                reward = -1000.0  # catastrophic negative reward
-            else:
-                # --- Forward-only reward calculations ---
-                
-                # Steering alignment toward center
-                delta_steering_angle = next_steering_angle - steering_angle
-                side_distance_diff = left_distance - right_distance
-                center_tolerance = 0.1
-                max_dist = 5.0
+            # Small reward for moving
+            reward += 0.05*speed
 
-                if abs(side_distance_diff) > center_tolerance:
-                    desired_steering_direction = -side_distance_diff
-                    alignment = delta_steering_angle * desired_steering_direction
-                    reward += alignment
-
-                # Wall-aware steering
-                if right_distance < max_dist:
-                    if delta_steering_angle > 0:  # steering toward wall
-                        reward -= 0.5 * (max_dist - right_distance)
-                    elif delta_steering_angle < 0:
-                        reward += 0.5 * (max_dist - right_distance)
-
-                if left_distance < max_dist:
-                    if delta_steering_angle < 0:  # steering toward wall
-                        reward -= 0.5 * (max_dist - left_distance)
-                    elif delta_steering_angle > 0:
-                        reward += 0.5 * (max_dist - left_distance)
-
-                # Forward progress reward
-                reward += (next_forward_distance - forward_distance) * 1.0
-                reward += 0.5 * speed
-
-                # Centering reward
-                reward += 0.2 * (max_dist - abs(side_distance_diff))
-
-            # Terminal penalty
-            if i == len(state_history) - 2 and terminated:
-                remaining_time = max_seconds_per_episode * 60 - i
-                reward -= 200.0 + 0.5 * remaining_time
-
-            # Clip reward
-            reward = np.clip(reward, -500.0, 500.0)
             rewards_history[i] = reward
         
         for r in rewards_history:

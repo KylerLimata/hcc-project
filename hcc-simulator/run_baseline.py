@@ -3,7 +3,7 @@ import numpy as np
 
 # Evaluate the baseline agent
 sim.load_environment("training_environment")
-handle = sim.run_episode(agents.BaselineAgent(), 100*60)
+handle = sim.run_episode(agents.BaselineAgent(), 30*60)
 sim.print("Running baseline agent.")
 
 while True:
