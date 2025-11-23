@@ -21,7 +21,7 @@ class BaselineAgent:
         if speed_diff < 1.0:
             engine_power = 1.0
         elif speed_diff > 1.0:
-            breaking_power = 1.0
+            engine_power = -1.0
 
         side_distance_diff = left_distance - right_distance
         steering_power = 0.0
@@ -36,7 +36,7 @@ class BaselineAgent:
         elif steering_angle_diff < -1.0*(math.pi/180.0):
             steering_power = 1.0
             
-        return [engine_power, breaking_power, steering_power]
+        return [engine_power, steering_power]
     
 class NNAgent:
     def __init__(self, model, num_steering_actions: int, num_engine_actions: int):
@@ -258,14 +258,9 @@ class NewFastNNAgent:
         self.state_history.append(inputs + state)
         self.action_history.append((steering_action, pedal_action))
 
-        engine_power = 0.0
+        engine_power = pedal_action - 1.0
         breaking_power = 0.0
         steering_power = steering_action - 1.0
 
-        if pedal_action == 1:
-            engine_power = 1.0
-        elif pedal_action == 2:
-            breaking_power = 1.0
-
-        return [engine_power, breaking_power, steering_power]
+        return [engine_power, steering_power]
     

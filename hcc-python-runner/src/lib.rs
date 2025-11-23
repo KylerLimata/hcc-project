@@ -171,13 +171,13 @@ impl IVehicleBody3D for AgentVehicleBody {
                 pyclass.agent.call_method1(py, "eval", args).unwrap().extract(py).unwrap()
             });
 
-            let engine_power = outputs.get(0).unwrap().clamp(0.0, 1.0);
-            let breaking_power = outputs.get(1).unwrap().clamp(0.0, 1.0);
-            let steering_power = outputs.get(2).unwrap().clamp(-1.0, 1.0);
+            let engine_power = outputs.get(0).unwrap().clamp(-1.0, 1.0);
+            // let breaking_power = outputs.get(1).unwrap().clamp(0.0, 1.0);
+            let steering_power = outputs.get(1).unwrap().clamp(-1.0, 1.0);
             let steering_angle = steering_angle + steering_power * PI/180.0;
 
             self.base_mut().set_engine_force(engine_power*25.0);
-            (self).base_mut().set_brake(breaking_power*5.0);
+            // (self).base_mut().set_brake(breaking_power*5.0);
             self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS) as f32);
         }
     }
