@@ -9,7 +9,7 @@ import agents
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 30
-max_episodes = 1
+max_episodes = 20
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -59,6 +59,9 @@ while episode_count < max_episodes:
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
     rewards_history = [0.0]*end_step
 
+    sim.print(f"{baseline_checkpoint_times}")
+    sim.print(f"{checkpoint_times}")
+
     with tf.GradientTape() as tape:
         # Use actual model to calculate states, needed to compute gradients
         action_steering, action_engine, critic_values = model(states_tf, training=True)
@@ -98,6 +101,8 @@ while episode_count < max_episodes:
             next_speed = next_state[3]
             steering_angle = state[4]
             next_steering_angle = next_state[4]
+            # deltas
+            delta_speed = next_speed - speed
 
             # Initialize reward
             reward = 0.0
@@ -109,10 +114,18 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward = np.maximum(nn_time - baseline_time, 0)
+                reward = np.maximum(baseline_time - nn_time, 0)
 
             # Small reward for moving
             reward += 0.05*speed
+            
+            # Penalty for breaking at low velocity
+            if speed < 1.0 and delta_speed < 0.0:
+                reward -= 0.5
+
+            # Penalty for crash
+            if i == len(agent.state_history) - 2:
+                reward -= 20.0
 
             rewards_history[i] = reward
         
