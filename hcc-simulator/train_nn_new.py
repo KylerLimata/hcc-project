@@ -59,6 +59,8 @@ while episode_count < max_episodes:
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
     rewards_history = [0.0]*end_step
 
+    sim.print(f" Completed in {end_step} steps")
+
     with tf.GradientTape() as tape:
         # Use actual model to calculate states, needed to compute gradients
         action_steering, action_engine, critic_values = model(states_tf, training=True)
@@ -98,6 +100,7 @@ while episode_count < max_episodes:
             next_steering_angle = next_state[4]
             # deltas
             delta_speed = next_speed - speed
+            delta_steering_angle = next_steering_angle - steering_angle
 
             # Initialize reward
             reward = 0.0
@@ -109,21 +112,21 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward = np.maximum(baseline_time - nn_time, 0)
+                reward = np.maximum(baseline_time - nn_time, 50)
 
-            # Small reward for moving
-            reward += 0.05*speed
+            reward += 0.5 * speed * max(0, (1 - abs(steering_angle)))
 
-            if speed < 1.0:
+            center_ratio = (left_distance - right_distance) / (left_distance + right_distance)
+            reward += 1.0 * (1.0 - abs(center_ratio))
 
-                if delta_speed < 0.0:
-                    reward -= 10.0
-                else:
-                    reward += 0.5*delta_speed
+            reward -= 0.05 * abs(steering_angle)
+            reward -= 0.1 * abs(delta_steering_angle)
 
-            # Penalty for crash
-            if i == len(agent.state_history) - 2 and terminated:
-                reward = -200
+            min_side = min(left_distance, right_distance)
+            reward += 0.3 * (min_side / 5.0)   # 0 near wall, 0.3 when safe
+
+            if terminated and i == len(agent.state_history) - 2 :
+                reward -= 50.0
 
             rewards_history[i] = reward
         
@@ -194,4 +197,4 @@ while episode_count < max_episodes:
         
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-        sim.print(f"-reward = {episode_reward}, loss = {loss_value}")
+        sim.print(f" reward = {episode_reward}, loss = {loss_value}")

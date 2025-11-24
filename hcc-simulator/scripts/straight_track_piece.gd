@@ -2,7 +2,7 @@
 extends Node3D
 
 @export_group("Track")
-@export_range(1.0, 100.0, 1.0, "suffix:m") var length: float = 1.0 : set = set_length
+@export_range(1.0, 100.0, 0.5, "suffix:m") var length: float = 1.0 : set = set_length
 
 var queued_ground_array = null
 var queued_left_wall_array = null

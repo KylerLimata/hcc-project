@@ -59,6 +59,8 @@ while episode_count < max_episodes:
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
     rewards_history = [0.0]*end_step
 
+    sim.print(f" Completed in {end_step} steps")
+
     with tf.GradientTape() as tape:
         # Use actual model to calculate states, needed to compute gradients
         action_steering, action_engine, critic_values = model(states_tf, training=True)
@@ -70,13 +72,15 @@ while episode_count < max_episodes:
         steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
         engine_action_probs_history   = tf.gather(action_engine, engine_indices, axis=1, batch_dims=1)
 
-        # Fill out rewards history
-        # - Reward the agent for getting to a checkpoint faster than baseline
-        for i in range(len(checkpoint_times)):
-            baseline_time = baseline_checkpoint_times[i]
-            nn_time = checkpoint_times[i]
-            reward = np.max([nn_time - baseline_time, 0])
-            rewards_history[nn_time] = reward
+        # # Fill out rewards history
+        # # - Reward the agent for getting to a checkpoint faster than baseline
+        # for i in range(len(checkpoint_times)):
+        #     baseline_time = baseline_checkpoint_times[i]
+        #     nn_time = checkpoint_times[i]
+        #     reward = np.max([nn_time - baseline_time, 0])
+        #     rewards_history[nn_time] = reward
+
+        j = 0 # Checkpoint times history
         
         # - Rewards based on state
         for i in range(len(agent.state_history) - 1):
@@ -95,7 +99,17 @@ while episode_count < max_episodes:
             steering_angle = state[4]
             next_steering_angle = next_state[4]
 
-            reward = rewards_history[i]
+            # Initialize reward
+            reward = 0.0
+
+            # --- Base checkpoint reward ---
+            if j < len(checkpoint_times) and i > checkpoint_times[j]:
+                j += 1
+
+            if j < len(checkpoint_times):
+                baseline_time = baseline_checkpoint_times[j]
+                nn_time = checkpoint_times[j]
+                reward = np.maximum(baseline_time - nn_time, 0)
 
             # Speed
             delta_speed = next_speed - speed
@@ -126,7 +140,7 @@ while episode_count < max_episodes:
             delta_steering_angle = next_steering_angle - steering_angle
             side_distance_diff = left_distance - right_distance
             # Define tolerance for "centered"
-            center_tolerance = 0.1
+            center_tolerance = 2.0
             
             # left distance > right_distance
             if side_distance_diff > center_tolerance:
@@ -147,19 +161,12 @@ while episode_count < max_episodes:
                     reward += 0.1*(5 - left_distance)
             else:
                 # Penalize for steering towards wall in straight sections
-                reward -= 0.1 * abs(steering_angle)
+                # reward -= 0.1 * abs(steering_angle)
+                    
+                # Small reward for moving
+                reward += 0.2*speed
 
-            # Small reward for moving
-            if forward_distance > 1.0:
-                reward += np.max([0.2*speed, 0.2*5.0])
-
-            if speed < 1.0:
-                if delta_speed < 0.0:
-                    reward -= 10.0
-                else:
-                    reward += 0.5*delta_speed
-
-            if terminated:
+            if terminated and i == len(agent.state_history) - 2 :
                 reward -= 20.0
 
             rewards_history[i] = reward
@@ -231,4 +238,4 @@ while episode_count < max_episodes:
         
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-        sim.print(f"-reward = {episode_reward}, loss = {loss_value}")
+        sim.print(f" reward = {episode_reward}, loss = {loss_value}")
