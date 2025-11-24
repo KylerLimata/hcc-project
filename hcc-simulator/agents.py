@@ -185,6 +185,7 @@ class NewFastNNAgent:
             num_engine_actions: int
             ):
         import tensorflow as tf
+        import numpy as np
         # Upack model weights
         # Weights evaluated with numpy for performance
         layers = model.layers
@@ -207,6 +208,7 @@ class NewFastNNAgent:
         self.num_engine_actions = num_engine_actions
         self.state_history = []
         self.action_history = []
+        self.rng = np.random.default_rng(8282)
 
     def apply_activation(self, x, activation):
         import tensorflow as tf
@@ -251,8 +253,8 @@ class NewFastNNAgent:
         critic_value = Y[2]
 
         # Sample actions
-        steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
-        pedal_action = np.random.choice(self.num_engine_actions, p=engine_action_probs)
+        steering_action = self.rng.choice(self.num_steering_actions, p=steering_action_probs)
+        pedal_action = self.rng.choice(self.num_engine_actions, p=engine_action_probs)
 
         # Update histories
         self.state_history.append(inputs + state)

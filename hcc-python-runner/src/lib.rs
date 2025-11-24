@@ -48,7 +48,6 @@ impl INode for PythonScriptRunner {
                 match message {
                     Message::Print(s) => godot_print!("{}", s),
                     Message::LoadEnvironment(ref name) => {
-                        godot_print!("Loading environment...");
                         self.signals().load_environment().emit(&GString::from(name));
                     }
                     Message::RunEpisode(agent, max_steps, episode_result) => {
@@ -89,9 +88,9 @@ impl PythonScriptRunner {
         let venv_path = pyinit::get_venv_path();
         self.msg_receiver = Some(rx);
 
-        Python::initialize();
-
         let join_handle = handle.spawn(async move {
+            Python::initialize();
+
             let simulation_runner = SimulationRunner {
                 message_sender: tx
             };

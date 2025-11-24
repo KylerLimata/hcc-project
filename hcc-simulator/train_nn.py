@@ -19,7 +19,7 @@ baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
 num_inputs = 5
 num_steering_actions = 3
 num_engine_actions = 3
-num_hidden = 128
+num_hidden = 512
 
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
@@ -39,9 +39,9 @@ rewards_history = []
 running_reward = 0
 episode_count = 0
 
-sim.load_environment("training_environment")
-
 while episode_count < max_episodes:
+    sim.load_environment("training_environment")
+
     episode_reward = 0
     # Create agent and run episode to get states
     agent = agents.NewFastNNAgent(model, num_steering_actions, num_engine_actions)
@@ -132,26 +132,36 @@ while episode_count < max_episodes:
             if side_distance_diff > center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Reward for steering left when close to a right wall
-                    reward += 1.0*(5 - right_distance)
+                    reward += 0.1*(5 - right_distance)
                 elif delta_steering_angle > 0.0:
                     # Penalize for steering right when close to right wall
-                    reward -= 1.0*(5 - right_distance)
+                    # reward -= 0.1*(5 - right_distance)
+                    pass
             elif side_distance_diff < -center_tolerance:
                 if delta_steering_angle < 0.0:
                     # Penalize for steering left when close to a left wall
-                    reward -= 1.0*(5 - left_distance)
+                    # reward -= 0.1*(5 - left_distance)
+                    pass
                 elif delta_steering_angle > 0.0:
                     # Reward for steering right when close to left wall
-                    reward += 1.0*(5 - left_distance)
+                    reward += 0.1*(5 - left_distance)
             else:
                 # Penalize for steering towards wall in straight sections
                 reward -= 0.1 * abs(steering_angle)
 
-            if delta_speed <= 0 and speed <= 0:
-                # Override rewards and impose massive penalty
-                # for staying still or moving backwards
-                reward = -5000.0
-            
+            # Small reward for moving
+            if forward_distance > 1.0:
+                reward += np.max([0.2*speed, 0.2*5.0])
+
+            if speed < 1.0:
+                if delta_speed < 0.0:
+                    reward -= 10.0
+                else:
+                    reward += 0.5*delta_speed
+
+            if terminated:
+                reward -= 20.0
+
             rewards_history[i] = reward
         
         for r in rewards_history:
@@ -171,9 +181,6 @@ while episode_count < max_episodes:
         for r in rewards_history[::-1]:
             discounted_sum = r + gamma * discounted_sum
             returns.insert(0, discounted_sum)
-
-        sim.print(f"len(rewards_history) = {len(rewards_history)}")
-        sim.print(f"len(returns) = {len(returns)}")
     
         # Normalize
         returns = np.array(returns)
@@ -202,27 +209,26 @@ while episode_count < max_episodes:
         
         # Backpropagation
         loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses)
-        sim.print(" Computing gradients...")
         grads = tape.gradient(loss_value, model.trainable_variables)
-        sim.print(" Applying gradients...")
         none_count = sum(1 for g in grads if g is None)
-        sim.print(f"DEBUG: total grads = {len(grads)}, None grads = {none_count}")
+        # sim.print(f"DEBUG: total grads = {len(grads)}, None grads = {none_count}")
 
         for i, (g, v) in enumerate(zip(grads, model.trainable_variables)):
             name = v.name
             if g is None:
-                sim.print(f"[{i}] VAR {name}: grad = None, shape={v.shape}, dtype={v.dtype}")
+                # sim.print(f"[{i}] VAR {name}: grad = None, shape={v.shape}, dtype={v.dtype}")
+                pass
             else:
                 try:
                     # eager numeric check
                     s = float(tf.reduce_sum(tf.abs(g)).numpy())
                     mn = float(tf.reduce_min(g).numpy())
                     mx = float(tf.reduce_max(g).numpy())
-                    sim.print(f"[{i}] VAR {name}: grad shape={g.shape}, dtype={g.dtype}, sum_abs={s:.6g}, min={mn:.6g}, max={mx:.6g}")
+                    # sim.print(f"[{i}] VAR {name}: grad shape={g.shape}, dtype={g.dtype}, sum_abs={s:.6g}, min={mn:.6g}, max={mx:.6g}")
                 except Exception as e:
-                    sim.print(f"[{i}] VAR {name}: grad present but numeric read failed: {e}")
+                    # sim.print(f"[{i}] VAR {name}: grad present but numeric read failed: {e}")
+                    pass
         
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        sim.print(f" gradients applied.")
 
-        sim.print(f" reward: {episode_reward}")
+        sim.print(f"-reward = {episode_reward}, loss = {loss_value}")
