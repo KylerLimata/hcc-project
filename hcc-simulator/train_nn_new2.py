@@ -9,7 +9,7 @@ import agents
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
-max_episodes = 1
+max_episodes = 10
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -40,7 +40,7 @@ running_reward = 0
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment_new")
+    sim.load_environment("training_environment")
 
     episode_reward = 0
     # Create agent and run episode to get states
@@ -57,7 +57,7 @@ while episode_count < max_episodes:
     state_history = agent.state_history
     action_history = agent.action_history
     states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
-    rewards_history = [0.0]*end_step
+    rewards_history = []
 
     sim.print(f" Completed in {end_step} steps")
 
@@ -74,16 +74,7 @@ while episode_count < max_episodes:
 
         j = 0 # Checkpoint times history
 
-        # - Rewards based on state
-        for i in range(len(agent.state_history)):
-            state = agent.state_history[i]
-            action = agent.action_history[i]
-            
-            next_state = agent.state_history[i]
-
-            if i < len(agent.state_history) - 1:
-                next_state = agent.state_history[i + 1]
-
+        for step, (state, action) in enumerate(zip(agent.state_history, agent.action_history)):
             # Inputs
             left_distance = state[0]
             forward_distance = state[1]
@@ -91,15 +82,36 @@ while episode_count < max_episodes:
             # State
             speed = state[3]
             steering_angle = state[4]
-            next_steering_angle = next_state[4]
-            # deltas
-            delta_steering_angle = next_steering_angle - steering_angle
+            # Action
+            steering_action = action[0] - 1.0
+            engine_action = action[1] - 1.0
+
+            # Engine and steering power
+            engine_power = 0.0
+            steering_power = 0.0
+
+            if engine_action == 0:
+                engine_power = -1.0
+            elif engine_action == 1:
+                engine_power = 0.0
+            else:
+                engine_power = 1.0
+
+            if steering_action == 0:
+                steering_power = -1.0
+            elif steering_action == 1:
+                steering_power = 0.0
+            else:
+                steering_power = 1.0
+
+            # Define tolerance for "centered"
+            center_tolerance = 2.0
 
             # Initialize reward
             reward = 0.0
 
             # --- Base checkpoint reward ---
-            if j < len(checkpoint_times) and i > checkpoint_times[j]:
+            if j < len(checkpoint_times) and step > checkpoint_times[j]:
                 j += 1
 
             if j < len(checkpoint_times):
@@ -107,28 +119,40 @@ while episode_count < max_episodes:
                 nn_time = checkpoint_times[j]
                 reward = np.maximum(baseline_time - nn_time, 0)
 
-            reward += 0.3 * speed * max(0, (1 - abs(steering_angle)))
-            reward += 1.0 * (forward_distance / 5.0)
+            
+            if forward_distance < 3.0:
+                if engine_power == -1.0 and speed < 1.0:
+                    reward -= 1.0
+                else:
+                    reward += 1.0
+            else:
+                if engine_power == 1.0:
+                    reward += 1.0
+                else:
+                    reward -= 1.0
 
-            center_ratio = (left_distance - right_distance) / (left_distance + right_distance)
-            reward += 1.0 * (1.0 - abs(center_ratio))
+            # Steering rewards/penalties
+            side_distance_diff = left_distance - right_distance
+            center_tolerance = 0.5
 
-            reward -= 0.05 * abs(steering_angle)
-            reward -= 0.1 * abs(delta_steering_angle)
+            # Turning
+            if abs(side_distance_diff) > center_tolerance:
+                # Turning left
+                if left_distance < right_distance:
+                    reward += (5 if steering_power > 0 else -5)
+                # Turning right
+                if right_distance < left_distance:
+                    reward += (5 if steering_power < 0 else -5)
+            # Not turning
+            else:
+                if steering_power == 0.0:
+                    reward += 5
+                    
+            # Append reward
+            rewards_history.append(reward)
 
-            min_side = min(left_distance, right_distance)
-            reward += 0.3 * (min_side / 5.0)   # 0 near wall, 0.3 when safe
-
-            danger = max(0, 1 - forward_distance / 5.0)
-            reward -= 2.0 * danger
-
-            if terminated and i == len(agent.state_history) - 1:
-                reward -= 20.0
-
-            rewards_history[i] = reward
-        
-        for r in rewards_history:
-            episode_reward += r
+        if terminated:
+            rewards_history[-1] -= 50
 
         # Update running reward to check condition for solving
         running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward

@@ -1,3 +1,12 @@
+class DebugAgent:
+    def __init__(self):
+        self.states = []
+
+    def eval(self, inputs: list[float], state: list[float]):
+        self.states.append(state)
+
+        return [1.0, 0.0]
+
 class BaselineAgent:
     def __init__(self):
         pass
@@ -254,15 +263,28 @@ class NewFastNNAgent:
 
         # Sample actions
         steering_action = self.rng.choice(self.num_steering_actions, p=steering_action_probs)
-        pedal_action = self.rng.choice(self.num_engine_actions, p=engine_action_probs)
+        engine_action = self.rng.choice(self.num_engine_actions, p=engine_action_probs)
 
         # Update histories
         self.state_history.append(inputs + state)
-        self.action_history.append((steering_action, pedal_action))
+        self.action_history.append((steering_action, engine_action))
 
-        engine_power = pedal_action - 1.0
-        breaking_power = 0.0
-        steering_power = steering_action - 1.0
+        engine_power = 0.0
+        steering_power = 0.0
+
+        if engine_action == 0:
+            engine_power = -1.0
+        elif engine_action == 1:
+            engine_power = 0.0
+        else:
+            engine_power = 1.0
+
+        if steering_action == 0:
+            steering_power = -1.0
+        elif steering_action == 1:
+            steering_power = 0.0
+        else:
+            steering_power = 1.0
 
         return [engine_power, steering_power]
     
