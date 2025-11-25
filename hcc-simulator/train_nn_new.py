@@ -8,7 +8,7 @@ import agents
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
-max_seconds_per_episode = 30
+max_seconds_per_episode = 60
 max_episodes = 20
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
@@ -40,7 +40,7 @@ running_reward = 0
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment")
+    sim.load_environment("training_environment_new")
 
     episode_reward = 0
     # Create agent and run episode to get states
@@ -112,18 +112,21 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward = np.maximum(baseline_time - nn_time, 50)
+                reward = np.maximum(baseline_time - nn_time, 0)
 
             reward += 0.5 * speed * max(0, (1 - abs(steering_angle)))
 
-            # center_ratio = (left_distance - right_distance) / (left_distance + right_distance)
-            # reward += 1.0 * (1.0 - abs(center_ratio))
+            center_ratio = (left_distance - right_distance) / (left_distance + right_distance)
+            reward += 1.0 * (1.0 - abs(center_ratio))
 
-            # reward -= 0.05 * abs(steering_angle)
-            # reward -= 0.1 * abs(delta_steering_angle)
+            reward -= 0.05 * abs(steering_angle)
+            reward -= 0.1 * abs(delta_steering_angle)
 
-            # min_side = min(left_distance, right_distance)
-            # reward += 0.3 * (min_side / 5.0)   # 0 near wall, 0.3 when safe
+            min_side = min(left_distance, right_distance)
+            reward += 0.3 * (min_side / 5.0)   # 0 near wall, 0.3 when safe
+
+            danger = max(0, 1 - forward_distance / 5.0)
+            reward -= 2.0 * danger
 
             if terminated and i == len(agent.state_history) - 2 :
                 reward -= 50.0

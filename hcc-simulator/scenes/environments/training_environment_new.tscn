@@ -1,0 +1,93 @@
+[gd_scene load_steps=7 format=3 uid="uid://cxmjck03hqfug"]
+
+[ext_resource type="Script" uid="uid://i5wn2vfor5l3" path="res://scripts/environment.gd" id="1_muafm"]
+[ext_resource type="Script" uid="uid://cj5lxdhxn8nhc" path="res://scripts/track.gd" id="2_akplq"]
+[ext_resource type="PackedScene" uid="uid://d2twlygj6e7gr" path="res://scenes/track/straight_track_piece.tscn" id="3_cwdnn"]
+[ext_resource type="PackedScene" uid="uid://cadrg823rbyi2" path="res://scenes/track/checkpoint.tscn" id="4_6ub2r"]
+[ext_resource type="PackedScene" uid="uid://n6gl8363mf31" path="res://scenes/track/curved_track_piece.tscn" id="5_xj68t"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kluam"]
+size = Vector3(4, 1, 2.1)
+
+[node name="TrainingEnvironment" type="Node3D"]
+script = ExtResource("1_muafm")
+
+[node name="Track" type="Node3D" parent="."]
+script = ExtResource("2_akplq")
+metadata/_custom_type_script = "uid://cj5lxdhxn8nhc"
+
+[node name="StraightTrackPiece" parent="Track" instance=ExtResource("3_cwdnn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+length = 3.5
+
+[node name="Checkpoint" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.5)
+
+[node name="CurvedTrackPiece" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.5)
+angle = 30.0
+direction = 1
+
+[node name="Checkpoint1" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 0.669873, 0, 4)
+
+[node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 0.669873, 0, 4)
+angle = 30.0
+direction = 1
+
+[node name="Checkpoint2" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 2.5, 0, 5.830127)
+
+[node name="CurvedTrackPiece3" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 2.5, 0, 5.830127)
+angle = 30.0
+direction = 1
+
+[node name="Checkpoint3" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0, 6.5)
+
+[node name="CurvedTrackPiece4" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0, 6.5)
+angle = 30.0
+
+[node name="Checkpoint4" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 7.5, 0, 7.169873)
+
+[node name="CurvedTrackPiece5" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 7.5, 0, 7.169873)
+angle = 30.0
+
+[node name="Checkpoint5" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 9.330127, 0, 9)
+
+[node name="CurvedTrackPiece6" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 9.330127, 0, 9)
+angle = 30.0
+
+[node name="Checkpoint6" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 11.5)
+
+[node name="StraightTrackPiece2" parent="Track" instance=ExtResource("3_cwdnn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 11.5)
+length = 5.0
+
+[node name="Checkpoint7" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 16.5)
+final = true
+
+[node name="Back Wall" type="StaticBody3D" parent="."]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Back Wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -2.125)
+shape = SubResource("BoxShape3D_kluam")
+
+[connection signal="checkpoint_activated" from="Track/Checkpoint" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint1" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint2" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint3" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint4" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint5" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint6" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint7" to="." method="on_checkpoint_activated"]
