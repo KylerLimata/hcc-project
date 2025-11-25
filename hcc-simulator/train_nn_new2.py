@@ -40,7 +40,7 @@ running_reward = 0
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment")
+    sim.load_environment("training_environment_new")
 
     episode_reward = 0
     # Create agent and run episode to get states
@@ -120,16 +120,24 @@ while episode_count < max_episodes:
                 reward = np.maximum(baseline_time - nn_time, 0)
 
             
-            if forward_distance < 3.0:
-                if engine_power == -1.0 and speed < 1.0:
-                    reward -= 1.0
+            # if forward_distance < 3.0:
+            #     if engine_power == -1.0 and speed < 1.0:
+            #         reward -= 1.0
+            #     else:
+            #         reward += 1.0
+            # else:
+            #     if engine_power == 1.0:
+            #         reward += 1.0
+            #     else:
+            #         reward -= 1.0
+                
+            if engine_power == 1.0:
+                reward += 1.0*forward_distance
+            if engine_power == -1.0:
+                if speed > 1.0:
+                    reward += 1.0*(5-forward_distance)
                 else:
-                    reward += 1.0
-            else:
-                if engine_power == 1.0:
-                    reward += 1.0
-                else:
-                    reward -= 1.0
+                    reward -= 10.0
 
             # Steering rewards/penalties
             side_distance_diff = left_distance - right_distance
@@ -139,20 +147,20 @@ while episode_count < max_episodes:
             if abs(side_distance_diff) > center_tolerance:
                 # Turning left
                 if left_distance < right_distance:
-                    reward += (5 if steering_power > 0 else -5)
+                    reward += (1 if steering_power > 0 else -1)
                 # Turning right
                 if right_distance < left_distance:
-                    reward += (5 if steering_power < 0 else -5)
+                    reward += (1 if steering_power < 0 else -1)
             # Not turning
             else:
                 if steering_power == 0.0:
-                    reward += 5
+                    reward += 1
                     
             # Append reward
             rewards_history.append(reward)
 
         if terminated:
-            rewards_history[-1] -= 50
+            rewards_history[-1] -= 50000000000
 
         # Update running reward to check condition for solving
         running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward
