@@ -116,14 +116,14 @@ while episode_count < max_episodes:
 
             reward += 0.5 * speed * max(0, (1 - abs(steering_angle)))
 
-            center_ratio = (left_distance - right_distance) / (left_distance + right_distance)
-            reward += 1.0 * (1.0 - abs(center_ratio))
+            # center_ratio = (left_distance - right_distance) / (left_distance + right_distance)
+            # reward += 1.0 * (1.0 - abs(center_ratio))
 
-            reward -= 0.05 * abs(steering_angle)
-            reward -= 0.1 * abs(delta_steering_angle)
+            # reward -= 0.05 * abs(steering_angle)
+            # reward -= 0.1 * abs(delta_steering_angle)
 
-            min_side = min(left_distance, right_distance)
-            reward += 0.3 * (min_side / 5.0)   # 0 near wall, 0.3 when safe
+            # min_side = min(left_distance, right_distance)
+            # reward += 0.3 * (min_side / 5.0)   # 0 near wall, 0.3 when safe
 
             if terminated and i == len(agent.state_history) - 2 :
                 reward -= 50.0
