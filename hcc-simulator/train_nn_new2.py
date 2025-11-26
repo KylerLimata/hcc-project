@@ -118,18 +118,6 @@ while episode_count < max_episodes:
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
                 reward = np.maximum(baseline_time - nn_time, 0)
-
-            
-            # if forward_distance < 3.0:
-            #     if engine_power == -1.0 and speed < 1.0:
-            #         reward -= 1.0
-            #     else:
-            #         reward += 1.0
-            # else:
-            #     if engine_power == 1.0:
-            #         reward += 1.0
-            #     else:
-            #         reward -= 1.0
                 
             if engine_power == 1.0:
                 reward += 1.0*forward_distance
@@ -157,10 +145,13 @@ while episode_count < max_episodes:
                     reward += 1
                     
             # Append reward
+            if step % 10 == 0:
+                sim.print(f"state = ({speed} m/s, {steering_angle} rad), input = ({left_distance} m, {right_distance} m, {forward_distance} m)")
+                sim.print(f"action = ({engine_power}, {steering_power}), reward = {reward}")
             rewards_history.append(reward)
 
         if terminated:
-            rewards_history[-1] -= 50000000000
+            rewards_history[-1] -= 100
 
         # Update running reward to check condition for solving
         running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward
