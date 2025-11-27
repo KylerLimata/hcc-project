@@ -9,7 +9,7 @@ import agents
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
-max_episodes = 10
+max_episodes = 5
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -83,8 +83,8 @@ while episode_count < max_episodes:
             speed = state[3]
             steering_angle = state[4]
             # Action
-            steering_action = action[0] - 1.0
-            engine_action = action[1] - 1.0
+            steering_action = action[0]
+            engine_action = action[1]
 
             # Engine and steering power
             engine_power = 0.0
@@ -105,7 +105,7 @@ while episode_count < max_episodes:
                 steering_power = 1.0
 
             # Define tolerance for "centered"
-            center_tolerance = 2.0
+            center_tolerance = 0.1
 
             # Initialize reward
             reward = 0.0
@@ -118,40 +118,58 @@ while episode_count < max_episodes:
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
                 reward = np.maximum(baseline_time - nn_time, 0)
+
+            side_distance_diff = left_distance - right_distance
                 
+            # Engine Reward
+            engine_reward = 0.0    
+
             if engine_power == 1.0:
-                reward += 1.0*forward_distance
+                if abs(side_distance_diff) > center_tolerance:
+                    if left_distance < right_distance and steering_power == -1.0:
+                        engine_reward -= 1.0*(5.0 - min(left_distance, right_distance))
+                    elif right_distance < left_distance and steering_action == 1.0:
+                        engine_reward -= 1.0*(5.0 - min(left_distance, right_distance))
+                else:
+                    engine_reward += 1.0*forward_distance - 1.0
             if engine_power == -1.0:
                 if speed > 1.0:
-                    reward += 1.0*(5-forward_distance)
+                    engine_reward += 1.0*(5-forward_distance)
                 else:
-                    reward -= 10.0
+                    engine_reward -= 2.0
+            if engine_power == 0.0:
+                if speed < 1.0:
+                    engine_reward -= 2.0
 
             # Steering rewards/penalties
-            side_distance_diff = left_distance - right_distance
             center_tolerance = 0.5
+            steering_reward = 0.0
 
             # Turning
             if abs(side_distance_diff) > center_tolerance:
                 # Turning left
                 if left_distance < right_distance:
-                    reward += (1 if steering_power > 0 else -1)
+                    steering_reward += (1 if steering_power > 0 else -1)
                 # Turning right
                 if right_distance < left_distance:
-                    reward += (1 if steering_power < 0 else -1)
+                    steering_reward += (1 if steering_power < 0 else -1)
             # Not turning
             else:
                 if steering_power == 0.0:
-                    reward += 1
+                    steering_reward += 1
+
+            reward += steering_reward + engine_reward
                     
             # Append reward
             if step % 10 == 0:
-                sim.print(f"state = ({speed} m/s, {steering_angle} rad), input = ({left_distance} m, {right_distance} m, {forward_distance} m)")
-                sim.print(f"action = ({engine_power}, {steering_power}), reward = {reward}")
+                sim.print(f"state = ({speed} m/s, {steering_angle} rad), input = ({left_distance} m, {forward_distance} m, {right_distance} m)")
+                sim.print(f"action = ({engine_power}, {steering_power}), reward = ({engine_reward}, {steering_reward})")
             rewards_history.append(reward)
 
         if terminated:
             rewards_history[-1] -= 100
+
+        episode_reward = sum(rewards_history)
 
         # Update running reward to check condition for solving
         running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward
