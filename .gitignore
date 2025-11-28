@@ -2,3 +2,5 @@
 **/.idea/
 **/hcc-python/
 **/.venv/
+
+*.dll
