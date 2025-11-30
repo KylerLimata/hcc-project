@@ -156,7 +156,7 @@ while episode_count < max_episodes:
             # Not turning
             else:
                 if steering_power == 0.0:
-                    steering_reward += 1
+                    steering_reward += 2
 
             reward += steering_reward + engine_reward
                     
