@@ -5,7 +5,7 @@ class DebugAgent:
     def eval(self, inputs: list[float], state: list[float]):
         self.states.append(state)
 
-        return [1.0, 0.0]
+        return [1.0, -1.0]
 
 class BaselineAgent:
     def __init__(self):

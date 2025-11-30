@@ -149,10 +149,10 @@ while episode_count < max_episodes:
             if abs(side_distance_diff) > center_tolerance:
                 # Turning left
                 if left_distance < right_distance:
-                    steering_reward += (1 if steering_power > 0 else -1)
+                    steering_reward += (2 if steering_power < 0 else -2)
                 # Turning right
                 if right_distance < left_distance:
-                    steering_reward += (1 if steering_power < 0 else -1)
+                    steering_reward += (2 if steering_power > 0 else -2)
             # Not turning
             else:
                 if steering_power == 0.0:
