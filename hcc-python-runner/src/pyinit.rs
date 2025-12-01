@@ -4,7 +4,7 @@ use godot::prelude::GString;
 use pyo3::{Bound, PyAny, PyResult, Python};
 use pyo3::prelude::PyAnyMethods;
 
-pub fn get_venv_path() -> std::path::PathBuf {
+pub fn get_venv_path() -> PathBuf {
     let ps = ProjectSettings::singleton();
     let project_root = ps.globalize_path(&GString::from("res://")).to_string();
 

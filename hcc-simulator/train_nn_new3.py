@@ -44,7 +44,7 @@ while episode_count < max_episodes:
 
     episode_reward = 0
     # Create agent and run episode to get states
-    agent = agents.NewFastNNAgent(model, num_steering_actions, num_engine_actions)
+    agent = agents.NNAgent(model, num_steering_actions, num_engine_actions)
     sim.print(f"Running training episode {episode_count + 1}.")
     handle = sim.run_episode(agent, max_seconds_per_episode*60)
 

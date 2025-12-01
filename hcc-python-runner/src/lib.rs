@@ -1,14 +1,14 @@
 mod pyinit;
 
-use std::f32::consts::{FRAC_PI_4, PI};
 use godot::classes::{IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
-use pyo3::types::{PyDict, PyDictMethods, PyTuple};
+use pyo3::types::{PyDict, PyDictMethods};
 use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
+use std::f32::consts::PI;
 use std::ffi::CString;
-use std::{env, fs};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
+use std::fs;
 use tokio::runtime::{Handle, Runtime};
 use tokio::task::JoinHandle;
 
@@ -190,7 +190,7 @@ impl AgentVehicleBody {
     }
 
     #[func]
-    fn on_body_entered(&mut self, node: Gd<Node3D>) {
+    fn on_body_entered(&mut self, _node: Gd<Node3D>) {
         self.signals().on_collide().emit()
     }
 
