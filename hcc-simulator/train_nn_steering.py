@@ -102,15 +102,15 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward = np.maximum(baseline_time - nn_time, 0)
+                # reward = np.maximum(baseline_time - nn_time, 0)
 
             side_distance_diff = left_distance - right_distance
             side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
             min_steering_angle = -30.0*(np.pi/180.0)
             max_steering_angle = 30.0*(np.pi/180.0)
             target_steering_angle = side_distance_diff_normalized * max_steering_angle
-            steering_angle_diff = target_steering_angle - steering_angle
-            steering_angle_diff_normalized = abs(steering_angle_diff) / (np.pi / 3)
+            steering_error = target_steering_angle - steering_angle
+            steering_angle_diff_normalized = abs(steering_error) / (np.pi / 3)
 
             # Steering rewards/penalties
             center_tolerance = 0.1
@@ -131,8 +131,15 @@ while episode_count < max_episodes:
             # else:
             #     reward += (0.3 if steering_power == 0 else -0.3)
 
-            if abs(steering_angle_diff) > np.pi/6.0:
-                pass
+            if abs(steering_error) > np.pi/45.0:
+                next_steering_angle = steering_angle + steering_power*np.pi/180.0
+                next_steering_error = target_steering_angle - next_steering_angle
+
+                if (abs(steering_error) - abs(next_steering_error)) > 0.0:
+                    reward += 0.3*abs(side_distance_diff)
+                elif (abs(steering_error) - abs(next_steering_error)) <= 0.0:
+                    reward -= 0.3*abs(side_distance_diff)
+
             else:
                 reward += (0.3 if steering_power == 0 else -0.3)
 
