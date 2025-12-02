@@ -44,7 +44,7 @@ engine_rewards_history = []
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment_new")
+    sim.load_environment("training_environment")
 
     episode_engine_reward = 0.0
     episode_steering_reward = 0.0
@@ -153,19 +153,19 @@ while episode_count < max_episodes:
             if abs(side_distance_diff) > center_tolerance:
                 # Turning left
                 if left_distance < right_distance:
-                    steering_reward += (2 if steering_power < 0 else -2)
+                    steering_reward += (1 if steering_power < 0 else -1)*(5 - abs(side_distance_diff))
                 # Turning right
                 if right_distance < left_distance:
-                    steering_reward += (2 if steering_power > 0 else -2)
+                    steering_reward += (1 if steering_power > 0 else -1)*(5 - abs(side_distance_diff))
             # Not turning
             else:
                 if steering_power == 0.0:
-                    steering_reward += 2
+                    steering_reward += 1
 
-            # # Append reward
-            # if step % 10 == 0:
-            #     sim.print(f"state = ({speed} m/s, {steering_angle} rad), input = ({left_distance} m, {forward_distance} m, {right_distance} m)")
-            #     sim.print(f"action = ({engine_power}, {steering_power}), reward = ({engine_reward}, {steering_reward})")
+            # Append reward
+            if step % 10 == 0:
+                sim.print(f"state = ({speed} m/s, {steering_angle} rad), input = ({left_distance} m, {forward_distance} m, {right_distance} m)")
+                sim.print(f"action = ({engine_power}, {steering_power}), reward = ({engine_reward}, {steering_reward})")
             steering_rewards_history.append(steering_reward)
             engine_rewards_history.append(engine_reward)
 
@@ -173,8 +173,8 @@ while episode_count < max_episodes:
             steering_rewards_history[-1] -= 100
             engine_rewards_history[-1] -= 100
 
-        episode_engine_reward = sum([r[0] for r in rewards_history])
-        episode_steering_reward = sum([r[1] for r in rewards_history])
+        episode_engine_reward = sum(steering_rewards_history)
+        episode_steering_reward = sum(engine_rewards_history)
 
 
         # Calculate expected value from rewards
