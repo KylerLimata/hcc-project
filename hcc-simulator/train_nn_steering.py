@@ -64,6 +64,7 @@ while episode_count < max_episodes:
         # Extract chosen action probabilities
         steering_indices = tf.constant([a for a in agent.action_history], dtype=tf.int32)
         steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
+        steering_action_probs_history = tf.math.log(steering_action_probs_history + 1e-8)
 
         j = 0 # Checkpoint times history
 
