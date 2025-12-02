@@ -37,7 +37,7 @@ rewards_history = []
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment_new")
+    sim.load_environment("training_environment")
 
     episode_reward = 0
     # Create agent and run episode to get states
@@ -102,7 +102,7 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                # reward = np.maximum(baseline_time - nn_time, 0)
+                reward = np.maximum(baseline_time - nn_time, 0)
 
             side_distance_diff = left_distance - right_distance
             side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
@@ -116,20 +116,25 @@ while episode_count < max_episodes:
             center_tolerance = 0.1
 
             # Turning
-            if abs(steering_angle_diff) > 1.0*(np.pi/180.0):
-                if steering_angle < target_steering_angle:
-                    if steering_power == 1:
-                        reward += 0.3*(1 - steering_angle_diff_normalized)
-                    else:
-                        reward -= 0.3*steering_angle_diff_normalized
+            # if abs(steering_angle_diff) > 1.0*(np.pi/180.0):
+            #     if steering_angle < target_steering_angle:
+            #         if steering_power == 1:
+            #             reward += 0.3*(1 - steering_angle_diff_normalized)*(1 - abs(side_distance_diff_normalized))
+            #         elif steering_power == -1:
+            #             reward -= 0.3*steering_angle_diff_normalized*(abs(side_distance_diff_normalized))
 
-                elif steering_angle > target_steering_angle:
-                    if steering_power == -1:
-                        reward += 0.3*(1 - steering_angle_diff_normalized)
-                    else:
-                        reward -= 0.3*steering_angle_diff_normalized
+            #     elif steering_angle > target_steering_angle:
+            #         if steering_power == -1:
+            #             reward += 0.3*(1 - steering_angle_diff_normalized)*(1 - abs(side_distance_diff_normalized))
+            #         elif steering_power == 1:
+            #             reward -= 0.3*steering_angle_diff_normalized*(abs(side_distance_diff_normalized))
+            # else:
+            #     reward += (0.3 if steering_power == 0 else -0.3)
+
+            if abs(steering_angle_diff) > np.pi/6.0:
+                pass
             else:
-                reward += (0.3 if steering_power == 0 else 0)
+                reward += (0.3 if steering_power == 0 else -0.3)
 
             # Append reward
             if step % 10 == 0:
