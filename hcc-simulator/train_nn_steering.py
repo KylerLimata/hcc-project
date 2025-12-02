@@ -64,7 +64,7 @@ while episode_count < max_episodes:
         # Extract chosen action probabilities
         steering_indices = tf.constant([a for a in agent.action_history], dtype=tf.int32)
         steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
-        steering_action_probs_history = tf.math.log(steering_action_probs_history + 1e-8)
+        steering_action_probs_history = tf.math.log(steering_action_probs_history + eps)
 
         j = 0 # Checkpoint times history
 
@@ -104,7 +104,7 @@ while episode_count < max_episodes:
                 nn_time = checkpoint_times[j]
                 # reward = np.maximum(baseline_time - nn_time, 0)
 
-            side_distance_diff = right_distance - left_distance
+            side_distance_diff = left_distance - right_distance
             side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
             min_steering_angle = -30.0*(np.pi/180.0)
             max_steering_angle = 30.0*(np.pi/180.0)
@@ -121,15 +121,15 @@ while episode_count < max_episodes:
                     if steering_power == 1:
                         reward += 0.3*(1 - steering_angle_diff_normalized)
                     else:
-                        reward -= 3*steering_angle_diff_normalized
+                        reward -= 0.3*steering_angle_diff_normalized
 
                 elif steering_angle > target_steering_angle:
                     if steering_power == -1:
                         reward += 0.3*(1 - steering_angle_diff_normalized)
                     else:
-                        reward -= 3*steering_angle_diff_normalized
+                        reward -= 0.3*steering_angle_diff_normalized
             else:
-                reward += (3 if steering_power == 0 else 0)
+                reward += (0.3 if steering_power == 0 else 0)
 
             # Append reward
             if step % 10 == 0:
