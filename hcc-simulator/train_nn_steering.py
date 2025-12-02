@@ -10,7 +10,7 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 5
+max_episodes = 10
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -37,7 +37,7 @@ rewards_history = []
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment")
+    sim.load_environment("training_environment_new")
 
     episode_reward = 0
     # Create agent and run episode to get states
@@ -101,15 +101,15 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward = np.maximum(baseline_time - nn_time, 0)
+                # reward = np.maximum(baseline_time - nn_time, 0)
 
-            side_distance_diff = left_distance - right_distance
-            side_distance_diff_normalized = max(-1.0, min(1.0, side_distance_diff / 5.0))
+            side_distance_diff = right_distance - left_distance
+            side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
             min_steering_angle = -30.0*(np.pi/180.0)
             max_steering_angle = 30.0*(np.pi/180.0)
-            target_steering_angle = min_steering_angle + (side_distance_diff_normalized + 1.0) * ((max_steering_angle - min_steering_angle) / 2.0)
+            target_steering_angle = side_distance_diff_normalized * max_steering_angle
             steering_angle_diff = target_steering_angle - steering_angle
-            steering_angle_diff_normalize = (steering_angle_diff)/(max_steering_angle - min_steering_angle)
+            steering_angle_diff_normalized = abs(steering_angle_diff) / (np.pi / 3)
 
             # Steering rewards/penalties
             center_tolerance = 0.1
@@ -117,17 +117,29 @@ while episode_count < max_episodes:
             # Turning
             if abs(steering_angle_diff) > 1.0*(np.pi/180.0):
                 if steering_angle < target_steering_angle:
-                    reward += (1 if steering_power == 1 else -1)
+                    if steering_power == 1:
+                        reward += 0.3*(1 - steering_angle_diff_normalized)
+                    else:
+                        reward -= 3*steering_angle_diff_normalized
+
                 elif steering_angle > target_steering_angle:
-                    reward += (1 if steering_power == -1 else -1)
+                    if steering_power == -1:
+                        reward += 0.3*(1 - steering_angle_diff_normalized)
+                    else:
+                        reward -= 3*steering_angle_diff_normalized
             else:
-                reward += (1 if steering_power == 0 else -1)
+                reward += (3 if steering_power == 0 else 0)
 
             # Append reward
+            if step % 10 == 0:
+                sim.print(f"state = ({steering_angle} rad), input = ({left_distance} m, {forward_distance} m, {right_distance} m)")
+                sim.print(f"target = ({target_steering_angle} rad), action = ({steering_power}), reward = ({reward})")
             rewards_history.append(reward)
         
         if terminated:
-            rewards_history[-1] -= 100
+            rewards_history[-1] -= 10
+
+        episode_reward = sum(rewards_history)
 
         # Calculate expected value from rewards
         # - At each timestep what was the total reward received after that timestep
@@ -170,6 +182,7 @@ while episode_count < max_episodes:
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         episode_count += 1
+        rewards_history = []
 
-        sim.print(f"rewards = ({episode_reward})")
+        sim.print(f"episode_reward = ({episode_reward})")
     

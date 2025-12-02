@@ -76,6 +76,10 @@ length = 5.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 16.5)
 final = true
 
+[node name="StraightTrackPiece3" parent="Track" instance=ExtResource("3_cwdnn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 16.5)
+length = 10.0
+
 [node name="Back Wall" type="StaticBody3D" parent="."]
 collision_layer = 2
 
