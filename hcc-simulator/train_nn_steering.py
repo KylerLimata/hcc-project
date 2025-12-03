@@ -59,12 +59,13 @@ while episode_count < max_episodes:
 
     with tf.GradientTape() as tape:
         # Use actual model to calculate states, needed to compute gradients
-        action_steering, critic_values = model(states_tf, training=True)
+        action_probs, critic_values = model(states_tf, training=True)
 
         # Extract chosen action probabilities
-        steering_indices = tf.constant([a for a in agent.action_history], dtype=tf.int32)
-        steering_action_probs_history = tf.gather(action_steering, steering_indices, axis=1, batch_dims=1)
-        steering_action_probs_history = tf.math.log(steering_action_probs_history + eps)
+        steering_indices = tf.constant([a for a in action_history], dtype=tf.int32)
+        steering_action_probs_history = tf.gather(action_probs, steering_indices, axis=1, batch_dims=1)
+        sim.print("here")
+        steering_action_probs_history = [ops.log(ap[0, a]) for ap, a in zip(steering_action_probs_history, action_history)]
 
         j = 0 # Checkpoint times history
 
@@ -108,40 +109,44 @@ while episode_count < max_episodes:
             side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
             min_steering_angle = -30.0*(np.pi/180.0)
             max_steering_angle = 30.0*(np.pi/180.0)
-            target_steering_angle = side_distance_diff_normalized * max_steering_angle
+            target_steering_angle = 0.0
+
+            if abs(side_distance_diff) > center_tolerance:
+                target_steering_angle = side_distance_diff_normalized * max_steering_angle
+
             steering_error = target_steering_angle - steering_angle
-            steering_angle_diff_normalized = abs(steering_error) / (np.pi / 3)
+            steering_error_norm = abs(steering_error) / (np.pi / 3)
 
             # Steering rewards/penalties
             center_tolerance = 0.1
 
             # Turning
-            # if abs(steering_angle_diff) > 1.0*(np.pi/180.0):
-            #     if steering_angle < target_steering_angle:
-            #         if steering_power == 1:
-            #             reward += 0.3*(1 - steering_angle_diff_normalized)*(1 - abs(side_distance_diff_normalized))
-            #         elif steering_power == -1:
-            #             reward -= 0.3*steering_angle_diff_normalized*(abs(side_distance_diff_normalized))
+            if abs(steering_error) > 1.0*(np.pi/180.0):
+                if steering_angle < target_steering_angle:
+                    if steering_power == 1:
+                        reward += 0.3*(1 - steering_error_norm)*(1 - abs(side_distance_diff_normalized))
+                    elif steering_power == -1:
+                        reward -= 0.3*steering_error_norm*(abs(side_distance_diff_normalized))
 
-            #     elif steering_angle > target_steering_angle:
-            #         if steering_power == -1:
-            #             reward += 0.3*(1 - steering_angle_diff_normalized)*(1 - abs(side_distance_diff_normalized))
-            #         elif steering_power == 1:
-            #             reward -= 0.3*steering_angle_diff_normalized*(abs(side_distance_diff_normalized))
-            # else:
-            #     reward += (0.3 if steering_power == 0 else -0.3)
-
-            if abs(steering_error) > np.pi/45.0:
-                next_steering_angle = steering_angle + steering_power*np.pi/180.0
-                next_steering_error = target_steering_angle - next_steering_angle
-
-                if (abs(steering_error) - abs(next_steering_error)) > 0.0:
-                    reward += 0.3*abs(side_distance_diff)
-                elif (abs(steering_error) - abs(next_steering_error)) <= 0.0:
-                    reward -= 0.3*abs(side_distance_diff)
-
+                elif steering_angle > target_steering_angle:
+                    if steering_power == -1:
+                        reward += 0.3*(1 - steering_error_norm)*(1 - abs(side_distance_diff_normalized))
+                    elif steering_power == 1:
+                        reward -= 0.3*steering_error_norm*(abs(side_distance_diff_normalized))
             else:
                 reward += (0.3 if steering_power == 0 else -0.3)
+
+            # if abs(steering_error) > np.pi/45.0:
+            #     next_steering_angle = steering_angle + steering_power*np.pi/180.0
+            #     next_steering_error = target_steering_angle - next_steering_angle
+
+            #     if (abs(steering_error) - abs(next_steering_error)) > 0.0:
+            #         reward += 0.3*abs(steering_error)
+            #     elif (abs(steering_error) - abs(next_steering_error)) <= 0.0:
+            #         reward -= 0.3*abs(steering_error)
+
+            # else:
+            #     reward += (0.3 if steering_power == 0 else -0.3)
 
             # Append reward
             if step % 10 == 0:
