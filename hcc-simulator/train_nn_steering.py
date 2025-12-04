@@ -10,7 +10,7 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 10
+max_episodes = 50
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -21,15 +21,18 @@ num_inputs = 5
 num_steering_actions = 3
 num_hidden = 128
 
+initializer = tf.keras.initializers.RandomUniform(minval=-0.01, maxval=0.01)
+
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
-action_engine = layers.Dense(num_steering_actions, activation="softmax", name = "steering_out")(common)
+action_engine = layers.Dense(num_steering_actions, activation="softmax", name = "steering_out",
+                             kernel_initializer=initializer, bias_initializer='zeros')(common)
 critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 
 model = keras.Model(inputs=inputs, outputs=[action_engine, critic])
 
 # Train neural network agent
-optimizer = keras.optimizers.Adam(learning_rate=0.01)
+optimizer = keras.optimizers.Adam(learning_rate=0.001)
 huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
@@ -53,19 +56,24 @@ while episode_count < max_episodes:
     checkpoint_times, terminated, end_step = handle.get_result()
     state_history = agent.state_history
     action_history = agent.action_history
-    states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
 
     sim.print(f" Completed in {end_step} steps")
 
     with tf.GradientTape() as tape:
+        states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
         # Use actual model to calculate states, needed to compute gradients
-        action_probs, critic_values = model(states_tf, training=True)
+        action_probs, critic_values = model(states_tf, training=False)
+
+        sim.print(f"action_probs = {action_probs.numpy()}")
 
         # Extract chosen action probabilities
-        steering_indices = tf.constant([a for a in action_history], dtype=tf.int32)
+        steering_indices = tf.constant(agent.action_history, dtype=tf.int32)
         steering_action_probs_history = tf.gather(action_probs, steering_indices, axis=1, batch_dims=1)
-        sim.print("here")
-        steering_action_probs_history = [ops.log(ap[0, a]) for ap, a in zip(steering_action_probs_history, action_history)]
+        steering_action_probs_history = tf.math.log(tf.clip_by_value(steering_action_probs_history, eps, 1.0))
+
+        # Compute entropy
+        entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
+        entropy_bonus = 0.01 * tf.reduce_mean(entropy)  # small weight
 
         j = 0 # Checkpoint times history
 
@@ -111,8 +119,8 @@ while episode_count < max_episodes:
             max_steering_angle = 30.0*(np.pi/180.0)
             target_steering_angle = 0.0
 
-            if abs(side_distance_diff) > center_tolerance:
-                target_steering_angle = side_distance_diff_normalized * max_steering_angle
+            # if abs(side_distance_diff) > center_tolerance:
+            #     target_steering_angle = side_distance_diff_normalized * max_steering_angle
 
             steering_error = target_steering_angle - steering_angle
             steering_error_norm = abs(steering_error) / (np.pi / 3)
@@ -124,38 +132,33 @@ while episode_count < max_episodes:
             if abs(steering_error) > 1.0*(np.pi/180.0):
                 if steering_angle < target_steering_angle:
                     if steering_power == 1:
-                        reward += 0.3*(1 - steering_error_norm)*(1 - abs(side_distance_diff_normalized))
+                        reward += 1.0*abs(steering_error_norm)
                     elif steering_power == -1:
-                        reward -= 0.3*steering_error_norm*(abs(side_distance_diff_normalized))
+                        reward -= 0.2*abs(steering_error_norm)
 
                 elif steering_angle > target_steering_angle:
                     if steering_power == -1:
-                        reward += 0.3*(1 - steering_error_norm)*(1 - abs(side_distance_diff_normalized))
+                        reward += 1.0*abs(steering_error_norm)
                     elif steering_power == 1:
-                        reward -= 0.3*steering_error_norm*(abs(side_distance_diff_normalized))
+                        reward -= 0.1*abs(steering_error_norm)
             else:
-                reward += (0.3 if steering_power == 0 else -0.3)
+                reward += (1.0 if steering_power == 0 else -0.2)
 
-            # if abs(steering_error) > np.pi/45.0:
-            #     next_steering_angle = steering_angle + steering_power*np.pi/180.0
-            #     next_steering_error = target_steering_angle - next_steering_angle
+            reward += (1.0 if steering_power == 0 else -0.2)
 
-            #     if (abs(steering_error) - abs(next_steering_error)) > 0.0:
-            #         reward += 0.3*abs(steering_error)
-            #     elif (abs(steering_error) - abs(next_steering_error)) <= 0.0:
-            #         reward -= 0.3*abs(steering_error)
+            # center_reward = 0.05 * (1 - abs(side_distance_diff_normalized))
+            # reward += center_reward
 
-            # else:
-            #     reward += (0.3 if steering_power == 0 else -0.3)
-
-            # Append reward
+            # Debugging
             if step % 10 == 0:
                 sim.print(f"state = ({steering_angle} rad), input = ({left_distance} m, {forward_distance} m, {right_distance} m)")
                 sim.print(f"target = ({target_steering_angle} rad), action = ({steering_power}), reward = ({reward})")
+
+            # Append reward
             rewards_history.append(reward)
         
         if terminated:
-            rewards_history[-1] -= 10
+            rewards_history[-1] -= 0.1*(max_steps - end_step)
 
         episode_reward = sum(rewards_history)
 
@@ -169,33 +172,36 @@ while episode_count < max_episodes:
             discounted_sum = r + gamma * discounted_sum
             returns.insert(0, discounted_sum)
 
-        # Normalize
-        returns = np.array(returns)
+        # Normalize Returns
+        returns = np.array(returns, dtype=np.float32)
         returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
-        returns = returns.tolist()
+        returns = tf.convert_to_tensor(returns, dtype=tf.float32)
+
+        # Normalize Diff
+        diffs = returns - critic_values.numpy().flatten()
+        diffs = (diffs - np.mean(diffs))/(np.std(diffs) + eps)
 
         # Calculating loss values to update our network
-        history = zip(steering_action_probs_history, critic_values, returns)
+        history = zip(steering_action_probs_history, critic_values, diffs)
         actor_losses = []
         critic_losses = []
 
-        for log_prob_steering, value, ret in history:
+        for log_prob_steering, value, diff in history:
             # At this point in history, the critic estimated that we would get a
             # total reward = `value` in the future. We took an action with log probability
             # of `log_prob` and ended up receiving a total reward = `ret`.
             # The actor must be updated so that it predicts an action that leads to
             # high rewards (compared to critic's estimate) with high probability.
-            diff = ret - value
             log_prob = log_prob_steering
             actor_losses.append(-log_prob * diff)  # actor loss
             # The critic must be updated so that it predicts a better estimate of
             # the future rewards.
             critic_losses.append(
-                huber_loss(ops.expand_dims(value, 0), ops.expand_dims(ret, 0))
+                huber_loss(ops.expand_dims(value, 0), ops.expand_dims(value + diff, 0))
             )
 
         # Backpropagation
-        loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses)
+        loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses) - entropy_bonus
         grads = tape.gradient(loss_value, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
