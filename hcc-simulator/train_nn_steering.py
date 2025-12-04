@@ -32,7 +32,7 @@ critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 model = keras.Model(inputs=inputs, outputs=[action_engine, critic])
 
 # Train neural network agent
-optimizer = keras.optimizers.Adam(learning_rate=0.001)
+optimizer = keras.optimizers.Adam(learning_rate=0.005)
 huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
@@ -158,7 +158,7 @@ while episode_count < max_episodes:
             rewards_history.append(reward)
         
         if terminated:
-            rewards_history[-1] -= 0.1*(max_steps - end_step)
+            rewards_history[-1] -= 50
 
         episode_reward = sum(rewards_history)
 
