@@ -15,7 +15,7 @@ func _physics_process(delta: float) -> void:
 		if ray.is_colliding():
 			distances[i] = global_position.distance_to(ray.get_collision_point())
 		else:
-			distances[i] = 5.0
+			distances[i] = 10.0
 		
 		pass
 	
