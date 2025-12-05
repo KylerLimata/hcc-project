@@ -6,7 +6,7 @@ var distances: Array[float] = [0.0, 0.0, 0.0]
 var rays: Array[RayCast3D] = []
 
 func _ready() -> void:
-	rays = [$LeftRaycast, $ForwardRaycast, $RightRaycast]
+	rays = [$LeftRaycast, $ForwardLeftRaycast, $ForwardRaycast, $ForwardRightRaycast, $RightRaycast]
 
 func _physics_process(delta: float) -> void:
 	for i in range(rays.size()):

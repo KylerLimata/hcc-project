@@ -162,7 +162,7 @@ impl IVehicleBody3D for AgentVehicleBody {
 
         if let Some(agent) = self.agent.as_mut() {
             let outputs: Vec<f32> = Python::attach(|py| {
-                let distances = if self.distances.is_empty() { vec![5.0, 5.0, 5.0] } else { self.distances.clone() };
+                let distances = if self.distances.is_empty() { vec![5.0, 5.0, 5.0, 5.0, 5.0] } else { self.distances.clone() };
                 let state = vec![speed, steering_angle as f64];
                 let args = (distances, state);
                 let pyclass = agent.bind_mut();
