@@ -42,32 +42,36 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
 angle = 15.0
 radius = 15.0
 
-[node name="Checkpoint4" parent="Track" instance=ExtResource("4_6ub2r")]
+[node name="StraightTrackPiece7" parent="Track" instance=ExtResource("3_cwdnn")]
 transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -0.51111263, 0, 25.882286)
+length = 4.0
+
+[node name="Checkpoint4" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -1.5463889, 0, 29.745989)
 
 [node name="StraightTrackPiece4" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -0.51111263, 0, 25.882286)
+transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -1.5463889, 0, 29.745989)
 length = 8.0
 
 [node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -2.581665, 0, 33.60969)
+transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -3.6169412, 0, 37.473396)
 angle = 15.0
 radius = 15.0
 direction = 1
 
 [node name="Checkpoint5" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 37.491978)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -4.1280537, 0, 41.355682)
 
 [node name="StraightTrackPiece5" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 37.491978)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -4.1280537, 0, 41.355682)
 length = 8.0
 
 [node name="Checkpoint6" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 45.491978)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -4.1280537, 0, 49.355682)
 final = true
 
 [node name="StraightTrackPiece6" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 45.491978)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -4.1280537, 0, 49.355682)
 length = 25.0
 
 [node name="Back Wall" type="StaticBody3D" parent="."]

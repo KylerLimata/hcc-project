@@ -144,7 +144,7 @@ while episode_count < max_episodes:
             else:
                 reward += (1.0 if steering_power == 0 else -0.2)
 
-            reward += (1.0*(forward_distance/10.0) if steering_power == 0 else -0.2)
+            # reward += (1.0*(forward_distance/10.0) if steering_power == 0 else -0.2)
 
             # center_reward = 0.05 * (1 - abs(side_distance_diff_normalized))
             # reward += center_reward
