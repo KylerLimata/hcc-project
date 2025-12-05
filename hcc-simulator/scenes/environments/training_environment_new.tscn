@@ -39,31 +39,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
 
 [node name="CurvedTrackPiece" parent="Track" instance=ExtResource("5_xj68t")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
-angle = 30.0
+angle = 15.0
 radius = 15.0
 
 [node name="Checkpoint4" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, -2.009619, 0, 29.5)
+transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -0.51111263, 0, 25.882286)
 
 [node name="StraightTrackPiece4" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, -2.009619, 0, 29.5)
+transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -0.51111263, 0, 25.882286)
 length = 8.0
 
 [node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, -6.0096188, 0, 36.428204)
-angle = 30.0
+transform = Transform3D(0.9659258, 0, -0.25881904, 0, 1, 0, 0.25881904, 0, 0.9659258, -2.581665, 0, 33.60969)
+angle = 15.0
 radius = 15.0
 direction = 1
 
 [node name="Checkpoint5" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0192375, 0, 43.928204)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 37.491978)
 
 [node name="StraightTrackPiece5" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0192375, 0, 43.928204)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 37.491978)
 length = 8.0
 
 [node name="Checkpoint6" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0192375, 0, 51.928204)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -3.0927777, 0, 45.491978)
 final = true
 
 [node name="Back Wall" type="StaticBody3D" parent="."]
