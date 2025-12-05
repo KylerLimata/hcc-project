@@ -111,7 +111,7 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                # reward = np.maximum(baseline_time - nn_time, 0)
+                reward += np.maximum(baseline_time - nn_time, 0)
 
             side_distance_diff = left_distance - right_distance
             side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
