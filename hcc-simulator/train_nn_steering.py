@@ -40,7 +40,7 @@ rewards_history = []
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment")
+    sim.load_environment("training_environment_new")
 
     episode_reward = 0
     # Create agent and run episode to get states

@@ -18,67 +18,53 @@ metadata/_custom_type_script = "uid://cj5lxdhxn8nhc"
 
 [node name="StraightTrackPiece" parent="Track" instance=ExtResource("3_cwdnn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
-length = 3.5
+length = 4.0
 
 [node name="Checkpoint" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.5)
-
-[node name="CurvedTrackPiece" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.5)
-angle = 30.0
-direction = 1
-
-[node name="Checkpoint1" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 0.669873, 0, 4)
-
-[node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 0.669873, 0, 4)
-angle = 30.0
-direction = 1
-
-[node name="Checkpoint2" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 2.5, 0, 5.830127)
-
-[node name="CurvedTrackPiece3" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 2.5, 0, 5.830127)
-angle = 30.0
-direction = 1
-
-[node name="Checkpoint3" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0, 6.5)
-
-[node name="CurvedTrackPiece4" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0, 6.5)
-angle = 30.0
-
-[node name="Checkpoint4" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 7.5, 0, 7.169873)
-
-[node name="CurvedTrackPiece5" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0.5, 0, 0.8660254, 0, 1, 0, -0.8660254, 0, 0.5, 7.5, 0, 7.169873)
-angle = 30.0
-
-[node name="Checkpoint5" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 9.330127, 0, 9)
-
-[node name="CurvedTrackPiece6" parent="Track" instance=ExtResource("5_xj68t")]
-transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 9.330127, 0, 9)
-angle = 30.0
-
-[node name="Checkpoint6" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 11.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
 
 [node name="StraightTrackPiece2" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 11.5)
-length = 5.0
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+length = 8.0
 
-[node name="Checkpoint7" parent="Track" instance=ExtResource("4_6ub2r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 16.5)
-final = true
+[node name="Checkpoint2" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 
 [node name="StraightTrackPiece3" parent="Track" instance=ExtResource("3_cwdnn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 16.5)
-length = 10.0
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+length = 12.0
+
+[node name="Checkpoint3" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
+
+[node name="CurvedTrackPiece" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
+angle = 30.0
+radius = 15.0
+
+[node name="Checkpoint4" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, -2.009619, 0, 29.5)
+
+[node name="StraightTrackPiece4" parent="Track" instance=ExtResource("3_cwdnn")]
+transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, -2.009619, 0, 29.5)
+length = 8.0
+
+[node name="CurvedTrackPiece2" parent="Track" instance=ExtResource("5_xj68t")]
+transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, -6.0096188, 0, 36.428204)
+angle = 30.0
+radius = 15.0
+direction = 1
+
+[node name="Checkpoint5" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0192375, 0, 43.928204)
+
+[node name="StraightTrackPiece5" parent="Track" instance=ExtResource("3_cwdnn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0192375, 0, 43.928204)
+length = 8.0
+
+[node name="Checkpoint6" parent="Track" instance=ExtResource("4_6ub2r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0192375, 0, 51.928204)
+final = true
 
 [node name="Back Wall" type="StaticBody3D" parent="."]
 collision_layer = 2
@@ -88,10 +74,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -2.125)
 shape = SubResource("BoxShape3D_kluam")
 
 [connection signal="checkpoint_activated" from="Track/Checkpoint" to="." method="on_checkpoint_activated"]
-[connection signal="checkpoint_activated" from="Track/Checkpoint1" to="." method="on_checkpoint_activated"]
 [connection signal="checkpoint_activated" from="Track/Checkpoint2" to="." method="on_checkpoint_activated"]
 [connection signal="checkpoint_activated" from="Track/Checkpoint3" to="." method="on_checkpoint_activated"]
 [connection signal="checkpoint_activated" from="Track/Checkpoint4" to="." method="on_checkpoint_activated"]
 [connection signal="checkpoint_activated" from="Track/Checkpoint5" to="." method="on_checkpoint_activated"]
 [connection signal="checkpoint_activated" from="Track/Checkpoint6" to="." method="on_checkpoint_activated"]
-[connection signal="checkpoint_activated" from="Track/Checkpoint7" to="." method="on_checkpoint_activated"]
