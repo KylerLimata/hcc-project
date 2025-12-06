@@ -24,7 +24,20 @@ class BaselineAgent:
         speed = state[0]
         steering_angle = state[1]
 
-        target_speed = 20*(forward_dist)
+        forward_side_diff = left_forward_dist - right_forward_dist
+        forward_side_sum = left_forward_dist + right_forward_dist
+        forward_side_dist = forward_dist
+
+        if left_forward_dist < right_forward_dist:
+            forward_side_dist = left_forward_dist
+        else:
+            right_forward_dist = right_forward_dist
+
+        projected_dist = forward_side_dist*math.cos(math.pi/6.0)
+        w = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
+        forward_dist_interp = (1 - w)*forward_dist + w*projected_dist
+
+        target_speed = 5*(forward_dist_interp)
         speed_err = speed - target_speed
         engine_power = 0.0
 
@@ -34,7 +47,7 @@ class BaselineAgent:
             engine_power = -1.0
 
         side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
-        forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
+        forward_dist_diff_norm = max(-1.0, min(1.0, (forward_side_diff)/10.0))
         min_steering = -30.0*(math.pi/180.0)
         max_steering = 30.0*(math.pi/180.0)
         alpha = min_steering + (side_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
@@ -50,6 +63,9 @@ class BaselineAgent:
             steering_power = 1.0
             
         return [engine_power, steering_power]
+    
+    def clamp(x, lo, hi):
+        return max(lo, min(hi, x))
 
 class NNAgent:
     def __init__(
