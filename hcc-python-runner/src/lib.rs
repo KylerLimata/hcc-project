@@ -1,6 +1,6 @@
 mod pyinit;
 
-use godot::classes::{IVehicleBody3D, VehicleBody3D};
+use godot::classes::{Area3D, IVehicleBody3D, VehicleBody3D};
 use godot::prelude::*;
 use pyo3::types::{PyDict, PyDictMethods};
 use pyo3::{pyclass, pymethods, Bound, Py, PyAny, PyResult, Python};
@@ -140,7 +140,9 @@ struct AgentVehicleBody {
     #[var]
     agent: Option<Gd<PythonAgent>>,
     base: Base<VehicleBody3D>,
-    distances: Vec<f64>
+    distances: Vec<f64>,
+    collision_countdown: i64,
+    last_speed: f64
 }
 
 #[godot_api]
@@ -149,7 +151,9 @@ impl IVehicleBody3D for AgentVehicleBody {
         Self {
             agent: None,
             base,
-            distances: vec![]
+            distances: vec![],
+            collision_countdown: 5,
+            last_speed: 0.0
         }
     }
 
@@ -178,6 +182,20 @@ impl IVehicleBody3D for AgentVehicleBody {
             self.base_mut().set_engine_force(engine_power*25.0);
             // (self).base_mut().set_brake(breaking_power*5.0);
             self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS) as f32);
+
+            let collision_detection = self.base().get_node_as::<Area3D>("CollisionDetection");
+
+            if collision_detection.has_overlapping_bodies() {
+                if speed == 0.0 || self.last_speed - speed > 1.0 || self.collision_countdown == 0 {
+                    self.signals().on_collide().emit()
+                }
+
+                self.collision_countdown -= 1
+            } else {
+                self.collision_countdown = 5
+            }
+
+            self.last_speed = speed;
         }
     }
 }

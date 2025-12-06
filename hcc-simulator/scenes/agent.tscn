@@ -125,4 +125,3 @@ collision_mask = 2
 shape = SubResource("BoxShape3D_b2pv0")
 
 [connection signal="update_raycast_distances" from="Raycasts" to="." method="update_raycast_distances"]
-[connection signal="body_entered" from="CollisionDetection" to="." method="on_body_entered"]
