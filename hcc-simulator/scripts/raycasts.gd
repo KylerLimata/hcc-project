@@ -2,7 +2,7 @@ extends Node3D
 
 signal update_raycast_distances(distances: Array[float])
 
-var distances: Array[float] = [0.0, 0.0, 0.0]
+var distances: Array[float] = [0.0, 0.0, 0.0, 0.0, 0.0]
 var rays: Array[RayCast3D] = []
 
 func _ready() -> void:
