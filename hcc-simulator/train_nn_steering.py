@@ -10,14 +10,14 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 50
+max_episodes = 100
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
 
 # Setup actor critic network
-num_inputs = 5
+num_inputs = 7
 num_steering_actions = 3
 num_hidden = 128
 
@@ -64,7 +64,7 @@ while episode_count < max_episodes:
         # Use actual model to calculate states, needed to compute gradients
         action_probs, critic_values = model(states_tf, training=False)
 
-        sim.print(f"action_probs = {action_probs.numpy()}")
+        # sim.print(f"action_probs = {action_probs.numpy()}")
 
         # Extract chosen action probabilities
         steering_indices = tf.constant(agent.action_history, dtype=tf.int32)
@@ -79,12 +79,14 @@ while episode_count < max_episodes:
 
         for step, (state, action) in enumerate(zip(agent.state_history, agent.action_history)):
             # Inputs
-            left_distance = state[0]
-            forward_distance = state[1]
-            right_distance = state[2]
+            left_dist = state[0]
+            left_forward_dist = state[1]
+            forward_dist = state[2]
+            right_forward_dist = state[3]
+            right_dist = state[4]
             # State
-            speed = state[3]
-            steering_angle = state[4]
+            speed = state[5]
+            steering_angle = state[6]
             # Action
             steering_action = action
 
@@ -111,48 +113,50 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward += np.maximum(baseline_time - nn_time, 0)
+                # reward += np.maximum(baseline_time - nn_time, 0)
 
-            side_distance_diff = left_distance - right_distance
-            side_distance_diff_normalized = np.clip(side_distance_diff / 5.0, -1.0, 1.0)
-            min_steering_angle = -30.0*(np.pi/180.0)
-            max_steering_angle = 30.0*(np.pi/180.0)
+            side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
+            forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
+            min_steering = -30.0*(np.pi/180.0)
+            max_steering = 30.0*(np.pi/180.0)
             target_steering_angle = 0.0
 
-            # if abs(side_distance_diff) > center_tolerance:
-            #     target_steering_angle = side_distance_diff_normalized * max_steering_angle
+            if abs(side_dist_diff_norm) > center_tolerance:
+                alpha = min_steering + (side_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
+                beta = min_steering + (forward_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
+                target_steering_angle = 0.75*alpha + 0.25*beta
 
-            steering_error = target_steering_angle - steering_angle
-            steering_error_norm = abs(steering_error) / (np.pi / 3)
+            steering_err = target_steering_angle - steering_angle
+            steering_err_norm = abs(steering_err) / (np.pi / 3)
 
             # Steering rewards/penalties
             center_tolerance = 0.1
 
             # Turning
-            if abs(steering_error) > 1.0*(np.pi/180.0):
+            if abs(steering_err) > 1.0*(np.pi/180.0):
                 if steering_angle < target_steering_angle:
                     if steering_power == 1:
-                        reward += 1.0*abs(steering_error_norm)
+                        reward += 1.0*abs(steering_err_norm)
                     elif steering_power == -1:
-                        reward -= 0.2*abs(steering_error_norm)
+                        reward -= 0.2*abs(steering_err_norm)
 
                 elif steering_angle > target_steering_angle:
                     if steering_power == -1:
-                        reward += 1.0*abs(steering_error_norm)
+                        reward += 1.0*abs(steering_err_norm)
                     elif steering_power == 1:
-                        reward -= 0.1*abs(steering_error_norm)
+                        reward -= 0.1*abs(steering_err_norm)
             else:
                 reward += (1.0 if steering_power == 0 else -0.2)
 
-            # reward += (1.0*(forward_distance/10.0) if steering_power == 0 else -0.2)
+            reward += (1.0*(forward_dist/10.0) if steering_power == 0 else -0.2)
 
             # center_reward = 0.05 * (1 - abs(side_distance_diff_normalized))
             # reward += center_reward
 
             # Debugging
-            if step % 10 == 0:
-                sim.print(f"state = ({steering_angle} rad), input = ({left_distance} m, {forward_distance} m, {right_distance} m)")
-                sim.print(f"target = ({target_steering_angle} rad), action = ({steering_power}), reward = ({reward})")
+            # if step % 10 == 0:
+            #     sim.print(f"state = ({steering_angle} rad), input = ({left_dist} m, {forward_dist} m, {right_dist} m)")
+            #     sim.print(f"target = ({target_steering_angle} rad), action = ({steering_power}), reward = ({reward})")
 
             # Append reward
             rewards_history.append(reward)
