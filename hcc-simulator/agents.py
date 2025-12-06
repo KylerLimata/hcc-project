@@ -370,7 +370,7 @@ class NNSteeringAgent:
 
 
         # Unpack input vec
-        forward_distance = inputs[1]
+        forward_distance = inputs[2]
         # Unpack state vec
         speed = state[0]
 
