@@ -370,11 +370,26 @@ class NNSteeringAgent:
 
 
         # Unpack input vec
-        forward_distance = inputs[2]
+        left_forward_dist = inputs[1]
+        forward_dist = inputs[2]
+        right_forward_dist = inputs[3]
         # Unpack state vec
         speed = state[0]
 
-        target_speed = 20*(forward_distance)
+        forward_side_diff = left_forward_dist - right_forward_dist
+        forward_side_sum = left_forward_dist + right_forward_dist
+        forward_side_dist = forward_dist
+
+        if left_forward_dist < right_forward_dist:
+            forward_side_dist = left_forward_dist
+        else:
+            right_forward_dist = right_forward_dist
+
+        projected_dist = forward_side_dist*np.cos(np.pi/6.0)
+        w = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
+        forward_dist_interp = (1 - w)*forward_dist + w*projected_dist
+
+        target_speed = 5*(forward_dist_interp)
         speed_diff = speed - target_speed
         engine_power = 0.0
 
