@@ -148,7 +148,7 @@ while episode_count < max_episodes:
             else:
                 reward += (1.0 if steering_power == 0 else -0.2)
 
-            reward += (1.0*(forward_dist/10.0) if steering_power == 0 else -0.2)
+            # reward += (1.0*(forward_dist/10.0) if steering_power == 0 else -0.2)
 
             # center_reward = 0.05 * (1 - abs(side_distance_diff_normalized))
             # reward += center_reward
@@ -185,24 +185,9 @@ while episode_count < max_episodes:
         diffs = returns - critic_values.numpy().flatten()
         diffs = (diffs - np.mean(diffs))/(np.std(diffs) + eps)
 
-        # Calculating loss values to update our network
-        history = zip(steering_action_probs_history, critic_values, diffs)
-        actor_losses = []
-        critic_losses = []
-
-        for log_prob_steering, value, diff in history:
-            # At this point in history, the critic estimated that we would get a
-            # total reward = `value` in the future. We took an action with log probability
-            # of `log_prob` and ended up receiving a total reward = `ret`.
-            # The actor must be updated so that it predicts an action that leads to
-            # high rewards (compared to critic's estimate) with high probability.
-            log_prob = log_prob_steering
-            actor_losses.append(-log_prob * diff)  # actor loss
-            # The critic must be updated so that it predicts a better estimate of
-            # the future rewards.
-            critic_losses.append(
-                huber_loss(ops.expand_dims(value, 0), ops.expand_dims(value + diff, 0))
-            )
+        # Actor + Critic losses
+        actor_losses = -steering_action_probs_history * diff  # log_probs already computed
+        critic_losses = huber_loss(returns, tf.squeeze(critic_values))
 
         # Backpropagation
         loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses) - entropy_bonus
