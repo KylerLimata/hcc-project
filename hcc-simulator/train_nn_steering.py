@@ -32,7 +32,7 @@ critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 model = keras.Model(inputs=inputs, outputs=[action_engine, critic])
 
 # Train neural network agent
-optimizer = keras.optimizers.Adam(learning_rate=0.005)
+optimizer = keras.optimizers.Adam(learning_rate=0.001)
 huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
