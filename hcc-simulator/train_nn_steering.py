@@ -10,7 +10,7 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 100
+max_episodes = 500
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -144,14 +144,9 @@ while episode_count < max_episodes:
                     if steering_power == -1:
                         reward += 1.0*abs(steering_err_norm)
                     elif steering_power == 1:
-                        reward -= 0.1*abs(steering_err_norm)
+                        reward -= 0.2*abs(steering_err_norm)
             else:
                 reward += (1.0 if steering_power == 0 else -0.2)
-
-            # reward += (1.0*(forward_dist/10.0) if steering_power == 0 else -0.2)
-
-            # center_reward = 0.05 * (1 - abs(side_distance_diff_normalized))
-            # reward += center_reward
 
             # Debugging
             # if step % 10 == 0:
@@ -162,7 +157,8 @@ while episode_count < max_episodes:
             rewards_history.append(reward)
         
         if terminated:
-            rewards_history[-1] -= 50
+            crash_penalty = 50 * (1.0 - (end_step / max_steps))
+            rewards_history[-1] -= crash_penalty
 
         episode_reward = sum(rewards_history)
 
@@ -179,19 +175,21 @@ while episode_count < max_episodes:
         # Normalize Returns
         returns = np.array(returns, dtype=np.float32)
         returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
-        returns = tf.convert_to_tensor(returns, dtype=tf.float32)
+        returns_tf = tf.convert_to_tensor(returns, dtype=tf.float32)
 
         # Normalize Diff
-        diffs = returns - critic_values.numpy().flatten()
-        diffs = (diffs - np.mean(diffs))/(np.std(diffs) + eps)
+        values_tf = tf.squeeze(critic_values)
+        diffs = returns_tf - values_tf      # shape (T,)
+        diffs = (diffs - tf.reduce_mean(diffs)) / (tf.math.reduce_std(diffs) + eps)
 
         # Actor + Critic losses
-        actor_losses = -steering_action_probs_history * diff  # log_probs already computed
-        critic_losses = huber_loss(returns, tf.squeeze(critic_values))
+        actor_losses = -tf.reduce_mean(steering_action_probs_history * diffs)
+        critic_losses = tf.reduce_mean(huber_loss(returns_tf, values_tf))
+        loss_value = actor_losses + critic_losses - entropy_bonus
 
         # Backpropagation
-        loss_value = tf.add_n(actor_losses) + tf.add_n(critic_losses) - entropy_bonus
         grads = tape.gradient(loss_value, model.trainable_variables)
+        grads = [tf.clip_by_norm(g, 0.5) if g is not None else None for g in grads]
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         episode_count += 1
