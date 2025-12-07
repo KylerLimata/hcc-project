@@ -170,14 +170,15 @@ while episode_count < max_episodes:
                 sim.print("Stagnation!")
                 stagnation_count += 1
             
-            # Increase penalty by 10% for every episode the agent stagnates
-            crash_penalty += 0.1*stagnation_count*crash_penalty
+            # Increase penalty by 50% for every episode the agent stagnates
+            crash_penalty += 0.5*stagnation_count*crash_penalty
             rewards_history[-1] -= crash_penalty
 
         episode_reward = sum(rewards_history)
 
         if abs(step_delta) > 5:
             stagnation_count = 0
+            last_end_step = end_step
 
         
 
@@ -213,8 +214,6 @@ while episode_count < max_episodes:
 
         episode_count += 1
         rewards_history = []
-
-        last_end_step = end_step
 
         sim.print(f"episode_reward = ({episode_reward})")
     
