@@ -114,7 +114,7 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                # reward += np.maximum(baseline_time - nn_time, 0)
+                reward += 0.1*np.maximum(baseline_time - nn_time, 0)
 
             side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
             forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
