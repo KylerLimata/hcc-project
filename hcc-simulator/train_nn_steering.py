@@ -12,6 +12,11 @@ max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
 max_episodes = 500
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
+
+# Entropy parameters
+stagnation_count = 0
+last_end_step = 0
+base_entropy_coef = 0.01      # increase if too weak later
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -38,10 +43,6 @@ engine_action_probs_history = []
 critic_value_history = []
 rewards_history = []
 episode_count = 0
-
-# Prior Rewards/Penalties
-last_end_step = 0
-stagnation_count = 0
 
 while episode_count < max_episodes:
     sim.load_environment("training_environment_new")
@@ -74,10 +75,6 @@ while episode_count < max_episodes:
         steering_indices = tf.constant(agent.action_history, dtype=tf.int32)
         steering_action_probs_history = tf.gather(action_probs, steering_indices, axis=1, batch_dims=1)
         steering_action_probs_history = tf.math.log(tf.clip_by_value(steering_action_probs_history, eps, 1.0))
-
-        # Compute entropy
-        entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
-        entropy_bonus = 0.01 * tf.reduce_mean(entropy)  # small weight
 
         j = 0 # Checkpoint times history
 
@@ -164,23 +161,16 @@ while episode_count < max_episodes:
         
         if terminated:
             crash_penalty = 50 * (1.0 - (end_step / max_steps))
-
-            if abs(step_delta) < 5:
-                # The agent is crashing and its strategy has not change significantly
-                sim.print("Stagnation!")
-                stagnation_count += 1
-            
-            # Increase penalty by 50% for every episode the agent stagnates
-            crash_penalty += 0.5*stagnation_count*crash_penalty
             rewards_history[-1] -= crash_penalty
 
         episode_reward = sum(rewards_history)
 
-        if abs(step_delta) > 5:
+        # Update stagnation count
+        if abs(step_delta) < 5:
+            stagnation_count += 1
+        else:
             stagnation_count = 0
             last_end_step = end_step
-
-        
 
         # Calculate expected value from rewards
         # - At each timestep what was the total reward received after that timestep
@@ -202,10 +192,15 @@ while episode_count < max_episodes:
         diffs = returns_tf - values_tf      # shape (T,)
         diffs = (diffs - tf.reduce_mean(diffs)) / (tf.math.reduce_std(diffs) + eps)
 
+        # Compute loss
+        entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
+        entropy_loss = tf.reduce_mean(entropy)
+        entropy_coef = base_entropy_coef * (1.0 + stagnation_count)
+
         # Actor + Critic losses
         actor_losses = -tf.reduce_mean(steering_action_probs_history * diffs)
         critic_losses = tf.reduce_mean(huber_loss(returns_tf, values_tf))
-        loss_value = actor_losses + critic_losses - entropy_bonus
+        loss_value = actor_losses + critic_losses - entropy_coef*entropy_loss
 
         # Backpropagation
         grads = tape.gradient(loss_value, model.trainable_variables)
