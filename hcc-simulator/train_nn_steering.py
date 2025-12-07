@@ -195,7 +195,7 @@ while episode_count < max_episodes:
         # Compute loss
         entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
         entropy_loss = tf.reduce_mean(entropy)
-        entropy_coef = base_entropy_coef * (1.0 + stagnation_count)
+        entropy_coef = base_entropy_coef * (1.0 + 0.5*stagnation_count**1.3)
 
         # Actor + Critic losses
         actor_losses = -tf.reduce_mean(steering_action_probs_history * diffs)
