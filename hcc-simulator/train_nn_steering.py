@@ -10,7 +10,7 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 100
+max_episodes = 500
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
     
 # Load baseline checkpoint times
@@ -38,6 +38,10 @@ engine_action_probs_history = []
 critic_value_history = []
 rewards_history = []
 episode_count = 0
+
+# Prior Rewards/Penalties
+last_end_step = 0
+stagnation_count = 0
 
 while episode_count < max_episodes:
     sim.load_environment("training_environment_new")
@@ -155,12 +159,27 @@ while episode_count < max_episodes:
 
             # Append reward
             rewards_history.append(reward)
+
+        step_delta = end_step - last_end_step
         
         if terminated:
             crash_penalty = 50 * (1.0 - (end_step / max_steps))
+
+            if abs(step_delta) < 5:
+                # The agent is crashing and its strategy has not change significantly
+                sim.print("Stagnation!")
+                stagnation_count += 1
+            
+            # Increase penalty by 10% for every episode the agent stagnates
+            crash_penalty += 0.1*stagnation_count*crash_penalty
             rewards_history[-1] -= crash_penalty
 
         episode_reward = sum(rewards_history)
+
+        if abs(step_delta) > 5:
+            stagnation_count = 0
+
+        
 
         # Calculate expected value from rewards
         # - At each timestep what was the total reward received after that timestep
@@ -194,6 +213,8 @@ while episode_count < max_episodes:
 
         episode_count += 1
         rewards_history = []
+
+        last_end_step = end_step
 
         sim.print(f"episode_reward = ({episode_reward})")
     
