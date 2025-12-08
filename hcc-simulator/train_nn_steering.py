@@ -169,9 +169,9 @@ while episode_count < max_episodes:
             prev_side_error = side_error
 
             # Debugging
-            if step % 10 == 0:
-                sim.print(f"state = ({steering_angle:.2f} rad), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
-                sim.print(f"target = ({target_steering_angle:.2f} rad), action = ({steering_power:.2f}), reward = ({reward:.2f})")
+            # if step % 10 == 0:
+            #     sim.print(f"state = ({steering_angle:.2f} rad), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
+            #     sim.print(f"target = ({target_steering_angle:.2f} rad), action = ({steering_power:.2f}), reward = ({reward:.2f})")
 
             # Append reward
             rewards_history.append(reward)
