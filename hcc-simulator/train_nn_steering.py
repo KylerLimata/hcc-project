@@ -24,7 +24,7 @@ baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
 # Setup actor critic network
 num_inputs = 7
 num_steering_actions = 3
-num_hidden = 128
+num_hidden = 64
 
 initializer = tf.keras.initializers.RandomUniform(minval=-0.01, maxval=0.01)
 
