@@ -7,7 +7,7 @@ import agents
 
 # Configuration parameters for the whole setup
 seed = 42
-gamma = 0.99  # Discount factor for past rewards
+gamma = 0.8  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
 max_episodes = 1000
