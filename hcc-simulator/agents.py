@@ -37,7 +37,7 @@ class BaselineAgent:
         w = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
         forward_dist_interp = (1 - w)*forward_dist + w*projected_dist
 
-        target_speed = 5*(forward_dist_interp)
+        target_speed = 0.5*(forward_dist_interp)
         speed_err = speed - target_speed
         engine_power = 0.0
 
@@ -386,7 +386,7 @@ class NNSteeringAgent:
         w = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
         forward_dist_interp = (1 - w)*forward_dist + w*projected_dist
 
-        target_speed = 5.5*(forward_dist_interp)
+        target_speed = 0.5*(forward_dist_interp)
         speed_diff = speed - target_speed
         engine_power = 0.0
 
