@@ -10,7 +10,7 @@ seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 500
+max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 # Entropy parameters
@@ -30,6 +30,7 @@ initializer = tf.keras.initializers.RandomUniform(minval=-0.01, maxval=0.01)
 
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
+common = layers.Dense(num_hidden, activation="relu")(common)
 action_engine = layers.Dense(num_steering_actions, activation="softmax", name = "steering_out",
                              kernel_initializer=initializer, bias_initializer='zeros')(common)
 critic = layers.Dense(1, activation="linear", name="critic_out")(common)
@@ -37,7 +38,7 @@ critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 model = keras.Model(inputs=inputs, outputs=[action_engine, critic])
 
 # Train neural network agent
-optimizer = keras.optimizers.Adam(learning_rate=0.001)
+optimizer = keras.optimizers.Adam(learning_rate=3e-4)
 huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
@@ -88,6 +89,11 @@ while episode_count < max_episodes:
             # State
             speed = state[5]
             steering_angle = state[6]
+
+            # Track previous side error for progress reward
+            if step == 0:
+                prev_side_error = abs(left_dist - right_dist)
+            
             # Action
             steering_action = action
 
@@ -114,8 +120,9 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                reward += 0.1*np.maximum(baseline_time - nn_time, 0)
+                # reward += 0.1*np.maximum(baseline_time - nn_time, 0)
 
+            side_dist_diff = left_dist - right_dist
             side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
             forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
             min_steering = -30.0*(np.pi/180.0)
@@ -139,20 +146,32 @@ while episode_count < max_episodes:
                     if steering_power == 1:
                         reward += 1.0*abs(steering_err_norm)
                     elif steering_power == -1:
-                        reward -= 0.2*abs(steering_err_norm)
+                        reward -= 1.0*abs(steering_err_norm)
 
                 elif steering_angle > target_steering_angle:
                     if steering_power == -1:
                         reward += 1.0*abs(steering_err_norm)
                     elif steering_power == 1:
-                        reward -= 0.2*abs(steering_err_norm)
+                        reward -= 1.0*abs(steering_err_norm)
             else:
                 reward += (1.0 if steering_power == 0 else -0.2)
 
+            side_error = abs(left_dist - right_dist)
+
+            if side_error > 0 and steering_power == 1:
+                reward -= 0.25
+            elif side_error < 0 and steering_power == -1:
+                reward -= 0.25
+            
+            side_progress = (prev_side_error - side_error)
+            side_progress = float(np.clip(side_progress, -0.05, 0.05))
+            reward += 0.2 * side_progress
+            prev_side_error = side_error
+
             # Debugging
-            # if step % 10 == 0:
-            #     sim.print(f"state = ({steering_angle} rad), input = ({left_dist} m, {forward_dist} m, {right_dist} m)")
-            #     sim.print(f"target = ({target_steering_angle} rad), action = ({steering_power}), reward = ({reward})")
+            if step % 10 == 0:
+                sim.print(f"state = ({steering_angle:.2f} rad), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
+                sim.print(f"target = ({target_steering_angle:.2f} rad), action = ({steering_power:.2f}), reward = ({reward:.2f})")
 
             # Append reward
             rewards_history.append(reward)
@@ -191,11 +210,13 @@ while episode_count < max_episodes:
         values_tf = tf.squeeze(critic_values)
         diffs = returns_tf - values_tf      # shape (T,)
         diffs = (diffs - tf.reduce_mean(diffs)) / (tf.math.reduce_std(diffs) + eps)
+        diffs = tf.clip_by_value(diffs, -2.0, 2.0)
 
         # Compute loss
         entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
         entropy_loss = tf.reduce_mean(entropy)
         entropy_coef = base_entropy_coef * (1.0 + 0.5*stagnation_count**1.3)
+        entropy_coef = float(min(entropy_coef, 0.15))
 
         # Actor + Critic losses
         actor_losses = -tf.reduce_mean(steering_action_probs_history * diffs)
@@ -210,5 +231,5 @@ while episode_count < max_episodes:
         episode_count += 1
         rewards_history = []
 
-        sim.print(f"episode_reward = ({episode_reward})")
+        sim.print(f"episode_reward = ({episode_reward:.2f})")
     
