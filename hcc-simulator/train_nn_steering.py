@@ -144,22 +144,30 @@ while episode_count < max_episodes:
             # Scaling
             side_error_factor = abs(side_dist_diff)
             speed_factor = max(0.0, 0.1*speed)
+            steering_reward = 0
+            steering_penalty = 0
 
             # Turning
             if abs(steering_err) > 1.0*(np.pi/90.0):
                 if steering_angle < target_steering_angle:
                     if steering_power == 1:
-                        reward += 10.0*abs(steering_err_norm) + 1.0*speed_factor
+                        steering_reward += 10
                     elif steering_power == -1:
-                        reward -= 10.0*abs(steering_err_norm) + 1.0*side_error_factor + 1.0*speed_factor
+                        steering_penalty += 10
 
                 elif steering_angle > target_steering_angle:
                     if steering_power == -1:
-                        reward += 10.0*abs(steering_err_norm) + 1.0*speed_factor
+                        steering_reward += 10
                     elif steering_power == 1:
-                        reward -= 10.0*abs(steering_err_norm) + 1.0*side_error_factor + 1.0*speed_factor
+                        steering_penalty += 10
             else:
-                reward += (10.0 + 1.0*speed_factor if steering_power == 0 else -10.0 + 1.0*speed_factor)
+                if steering_power == 0:
+                    steering_reward += 10
+                else:
+                    steering_penalty += 10
+
+            reward += steering_reward*abs(steering_err) + side_error_factor + speed_factor
+            reward -= steering_penalty*abs(steering_err) + side_error_factor + speed_factor
 
             side_error = abs(left_dist - right_dist)
 
