@@ -9,6 +9,7 @@ use std::ffi::CString;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
 use std::fs;
+use rand::Rng;
 use tokio::runtime::{Handle, Runtime};
 use tokio::task::JoinHandle;
 
@@ -177,9 +178,9 @@ impl IVehicleBody3D for AgentVehicleBody {
             let engine_power = outputs.get(0).unwrap().clamp(-1.0, 1.0);
             // let breaking_power = outputs.get(1).unwrap().clamp(0.0, 1.0);
             let steering_power = outputs.get(1).unwrap().clamp(-1.0, 1.0);
-            let steering_angle = steering_angle + steering_power * PI/180.0;
+            let steering_angle = steering_angle + steering_power * PI / 180.0;
 
-            self.base_mut().set_engine_force(engine_power*25.0);
+            self.base_mut().set_engine_force(engine_power * 25.0);
             // (self).base_mut().set_brake(breaking_power*5.0);
             self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS) as f32);
 
@@ -197,6 +198,11 @@ impl IVehicleBody3D for AgentVehicleBody {
 
             self.last_speed = speed;
         }
+    }
+
+    fn ready(&mut self) {
+        let rotation = randf_range(-PI/12.0, PI/12.0);
+        self.base_mut().rotate_y(rotation);
     }
 }
 
@@ -320,3 +326,8 @@ enum Message {
     RunEpisode(Py<PyAny>, i64, EpisodeHandle),
 }
 
+fn randf_range(min: f32, max: f32) -> f32 {
+    use rand::Rng; // You'll need the `rand` crate in Cargo.toml for this.
+    let mut rng = rand::rng();
+    rng.random_range(min..=max)
+}

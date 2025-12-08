@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://n6gl8363mf31" path="res://scenes/track/curved_track_piece.tscn" id="5_xj68t"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_kluam"]
-size = Vector3(4, 1, 2.1)
+size = Vector3(4, 1, 1)
 
 [node name="TrainingEnvironment" type="Node3D"]
 script = ExtResource("1_muafm")
