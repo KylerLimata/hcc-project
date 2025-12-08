@@ -16,7 +16,7 @@ eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 
 # Entropy parameters
 stagnation_count = 0
 last_end_step = 0
-base_entropy_coef = 0.01      # increase if too weak later
+base_entropy_coef = 0.1      # increase if too weak later
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -31,6 +31,7 @@ initializer = tf.keras.initializers.RandomUniform(minval=-0.01, maxval=0.01)
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
 common = layers.Dense(num_hidden, activation="relu")(common)
+common = layers.Dense(num_hidden, activation="relu")(common)
 action_engine = layers.Dense(num_steering_actions, activation="softmax", name = "steering_out",
                              kernel_initializer=initializer, bias_initializer='zeros')(common)
 critic = layers.Dense(1, activation="linear", name="critic_out")(common)
@@ -38,7 +39,7 @@ critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 model = keras.Model(inputs=inputs, outputs=[action_engine, critic])
 
 # Train neural network agent
-optimizer = keras.optimizers.Adam(learning_rate=3e-4)
+optimizer = keras.optimizers.Adam(learning_rate=3e-3)
 huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
@@ -140,21 +141,25 @@ while episode_count < max_episodes:
             # Steering rewards/penalties
             center_tolerance = 0.1
 
+            # Scaling
+            side_error_factor = abs(side_dist_diff)
+            speed_factor = max(0.0, 0.1*speed)
+
             # Turning
-            if abs(steering_err) > 1.0*(np.pi/180.0):
+            if abs(steering_err) > 1.0*(np.pi/90.0):
                 if steering_angle < target_steering_angle:
                     if steering_power == 1:
-                        reward += 1.0*abs(steering_err_norm)
+                        reward += 10.0*abs(steering_err_norm) + 1.0*speed_factor
                     elif steering_power == -1:
-                        reward -= 1.0*abs(steering_err_norm)
+                        reward -= 10.0*abs(steering_err_norm) + 1.0*side_error_factor + 1.0*speed_factor
 
                 elif steering_angle > target_steering_angle:
                     if steering_power == -1:
-                        reward += 1.0*abs(steering_err_norm)
+                        reward += 10.0*abs(steering_err_norm) + 1.0*speed_factor
                     elif steering_power == 1:
-                        reward -= 1.0*abs(steering_err_norm)
+                        reward -= 10.0*abs(steering_err_norm) + 1.0*side_error_factor + 1.0*speed_factor
             else:
-                reward += (1.0 if steering_power == 0 else -0.2)
+                reward += (10.0 + 1.0*speed_factor if steering_power == 0 else -10.0 + 1.0*speed_factor)
 
             side_error = abs(left_dist - right_dist)
 
@@ -175,21 +180,12 @@ while episode_count < max_episodes:
 
             # Append reward
             rewards_history.append(reward)
-
-        step_delta = end_step - last_end_step
         
         if terminated:
             crash_penalty = 50 * (1.0 - (end_step / max_steps))
             rewards_history[-1] -= crash_penalty
 
         episode_reward = sum(rewards_history)
-
-        # Update stagnation count
-        if abs(step_delta) < 5:
-            stagnation_count += 1
-        else:
-            stagnation_count = 0
-            last_end_step = end_step
 
         # Calculate expected value from rewards
         # - At each timestep what was the total reward received after that timestep
@@ -215,8 +211,7 @@ while episode_count < max_episodes:
         # Compute loss
         entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
         entropy_loss = tf.reduce_mean(entropy)
-        entropy_coef = base_entropy_coef * (1.0 + 0.5*stagnation_count**1.3)
-        entropy_coef = float(min(entropy_coef, 0.15))
+        entropy_coef = base_entropy_coef
 
         # Actor + Critic losses
         actor_losses = -tf.reduce_mean(steering_action_probs_history * diffs)
