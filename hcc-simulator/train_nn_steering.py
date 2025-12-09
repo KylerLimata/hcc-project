@@ -134,7 +134,7 @@ while episode_count < max_episodes:
                 target_steering_angle = 0.75*alpha + 0.25*beta
 
             steering_err = steering_angle - target_steering_angle
-            steering_err_norm = abs(steering_err) / (np.pi / 3)
+            steering_err_norm = steering_err_norm / (np.pi / 3)
 
             # Steering rewards/penalties
             side_error_factor = abs(side_dist_diff)
