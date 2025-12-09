@@ -135,51 +135,26 @@ while episode_count < max_episodes:
                 beta = min_steering + (forward_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
                 target_steering_angle = 0.75*alpha + 0.25*beta
 
-            steering_err = target_steering_angle - steering_angle
+            steering_err = steering_angle - target_steering_angle
             steering_err_norm = abs(steering_err) / (np.pi / 3)
 
             # Steering rewards/penalties
-            center_tolerance = 0.1
-
-            # Scaling
             side_error_factor = abs(side_dist_diff)
             speed_factor = max(0.0, 0.1*speed)
-            steering_reward = 0
-            steering_penalty = 0
 
-            # Turning
-            if abs(steering_err) > 1.0*(np.pi/90.0):
-                if steering_angle < target_steering_angle:
-                    if steering_power == 1:
-                        steering_reward += 10
-                    elif steering_power == -1:
-                        steering_penalty += 10
-
-                elif steering_angle > target_steering_angle:
-                    if steering_power == -1:
-                        steering_reward += 10
-                    elif steering_power == 1:
-                        steering_penalty += 10
+            if steering_power == -1:
+                reward += 10.0*steering_err*(side_error_factor + speed_factor)
+            elif steering_power == 0:
+                reward += (20.0 if abs(steering_err) < np.pi/90 else -20.0)
+            elif steering_power == 1:
+                reward += -10.0*steering_err*(side_error_factor + speed_factor)
             else:
-                if steering_power == 0:
-                    steering_reward += 10
-                else:
-                    steering_penalty += 10
-
-            reward += steering_reward*abs(steering_err) + side_error_factor + speed_factor
-            reward -= steering_penalty*abs(steering_err) + side_error_factor + speed_factor
-
-            side_error = abs(left_dist - right_dist)
-
-            if side_error > 0 and steering_power == 1:
-                reward -= 0.25
-            elif side_error < 0 and steering_power == -1:
-                reward -= 0.25
+                sim.print("Invalid steering power!")
             
-            side_progress = (prev_side_error - side_error)
-            side_progress = float(np.clip(side_progress, -0.05, 0.05))
-            reward += 0.2 * side_progress
-            prev_side_error = side_error
+            # side_progress = (prev_side_error - side_error)
+            # side_progress = float(np.clip(side_progress, -0.05, 0.05))
+            # reward += 0.2 * side_progress
+            # prev_side_error = side_error
 
             # Debugging
             # if step % 10 == 0:
