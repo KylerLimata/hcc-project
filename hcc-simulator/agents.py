@@ -171,8 +171,7 @@ class NNAgent:
 class NNEngineAgent:
     def __init__(
             self, 
-            model, 
-            num_steering_actions: int, 
+            model,
             num_engine_actions: int
             ):
         import tensorflow as tf
@@ -195,7 +194,6 @@ class NNEngineAgent:
                 if len(weights) == 2:
                     self.output_layers.append((weights[0], weights[1], layer.activation))
         
-        self.num_steering_actions = num_steering_actions
         self.num_engine_actions = num_engine_actions
         self.state_history = []
         self.action_history = []
@@ -225,9 +223,13 @@ class NNEngineAgent:
         import math
 
         # Unpack input vec
-        left_distance = inputs[0]
-        right_distance = inputs[2]
+        left_dist = inputs[0]
+        left_forward_dist = inputs[1]
+        forward_dist = inputs[2]
+        right_forward_dist = inputs[3]
+        right_dist = inputs[4]
         # Unpack state vec
+        speed = state[0]
         steering_angle = state[1]
 
         # Convert inputs and state into single numpy array
@@ -264,17 +266,19 @@ class NNEngineAgent:
         else:
             engine_power = 1.0
 
-        side_distance_diff = left_distance - right_distance
-        steering_power = 0.0
-        side_distance_diff_normalized = max(-1.0, min(1.0, side_distance_diff / 5.0))
-        min_steering_angle = -30.0*(math.pi/180.0)
-        max_steering_angle = 30.0*(math.pi/180.0)
-        target_steering_angle = min_steering_angle + (side_distance_diff_normalized + 1.0) * ((max_steering_angle - min_steering_angle) / 2.0)
-        steering_angle_diff = steering_angle - target_steering_angle
+        forward_side_diff = left_forward_dist - right_forward_dist
+        side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
+        forward_dist_diff_norm = max(-1.0, min(1.0, (forward_side_diff)/10.0))
+        min_steering = -30.0*(math.pi/180.0)
+        max_steering = 30.0*(math.pi/180.0)
+        alpha = min_steering + (side_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
+        beta = min_steering + (forward_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
+        target_steering_angle = 0.75*alpha + 0.25*beta
+        steering_err = steering_angle - target_steering_angle
 
-        if steering_angle_diff > 1.0*(math.pi/180.0):
+        if steering_err > 1.0*(math.pi/180.0):
             steering_power = -1.0
-        elif steering_angle_diff < -1.0*(math.pi/180.0):
+        elif steering_err < -1.0*(math.pi/180.0):
             steering_power = 1.0
 
         return [engine_power, steering_power]
