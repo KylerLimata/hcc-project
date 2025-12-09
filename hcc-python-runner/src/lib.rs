@@ -201,8 +201,15 @@ impl IVehicleBody3D for AgentVehicleBody {
     }
 
     fn ready(&mut self) {
-        let rotation = randf_range(-PI/12.0, PI/12.0);
-        self.base_mut().rotate_y(rotation);
+        let initial_rotation = randf_range(-PI/12.0, PI/12.0);
+        let initial_steering = randf_range(-PI/12.0, PI/12.0);
+        let initial_speed = randf_range(0.0, 5.0);
+        let global_transform = self.base_mut().get_global_transform();
+        let forward = global_transform.basis.col_c();
+
+        self.base_mut().rotate_y(initial_rotation);
+        self.base_mut().set_steering(initial_steering);
+        self.base_mut().set_linear_velocity(forward*initial_speed);
     }
 }
 
