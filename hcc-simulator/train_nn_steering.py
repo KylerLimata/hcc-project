@@ -24,14 +24,12 @@ baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
 # Setup actor critic network
 num_inputs = 7
 num_steering_actions = 3
-num_hidden = 64
+num_hidden = 128
 
 initializer = tf.keras.initializers.RandomUniform(minval=-0.01, maxval=0.01)
 
 inputs = layers.Input(shape=(num_inputs,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
-common = layers.Dense(num_hidden, activation="relu")(common)
-common = layers.Dense(num_hidden, activation="relu")(common)
 action_engine = layers.Dense(num_steering_actions, activation="softmax", name = "steering_out",
                              kernel_initializer=initializer, bias_initializer='zeros')(common)
 critic = layers.Dense(1, activation="linear", name="critic_out")(common)
