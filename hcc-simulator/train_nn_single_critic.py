@@ -12,7 +12,7 @@ max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
 max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
-ws = 0.5 # Steering reward weight
+ws = 0.3 # Steering reward weight
 we = 1 - ws # Engine reward weight
 breaking = True # Whether the agent slows down by breaking instead of reverse throttle
 
@@ -110,7 +110,7 @@ while episode_count < max_episodes:
                 if breaking:
                     breaking_power = 1.0
                 else:
-                    steering_power = -1.0
+                    engine_power = -1.0
             elif steering_action == 1:
                 steering_power = 0.0
             else:
@@ -191,7 +191,7 @@ while episode_count < max_episodes:
             steering_factor = abs(steering_angle)
 
             if engine_power == -1.0 or breaking_power == 1.0:
-                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor)
+                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor) - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
             elif engine_power == 0.0:
                 engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
             elif engine_power == 1.0:
@@ -204,9 +204,9 @@ while episode_count < max_episodes:
             rewards_history.append(reward)
 
             # Debugging
-            # if step % 10 == 0:
-            #     sim.print(f"state = ({steering_angle:.2f} rad), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
-            #     sim.print(f"target = ({target_steering_angle:.2f} rad), action = ({steering_power:.2f}), reward = ({reward:.2f})")
+            if step % 20 == 0:
+                sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
+                sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({reward:.2f}, {steering_reward:.2f}, {engine_reward:.2f})")
             
         
         if terminated:
