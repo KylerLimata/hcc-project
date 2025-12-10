@@ -176,13 +176,17 @@ impl IVehicleBody3D for AgentVehicleBody {
             });
 
             let engine_power = outputs.get(0).unwrap().clamp(-1.0, 1.0);
-            // let breaking_power = outputs.get(1).unwrap().clamp(0.0, 1.0);
             let steering_power = outputs.get(1).unwrap().clamp(-1.0, 1.0);
             let steering_angle = steering_angle + steering_power * PI / 180.0;
 
             self.base_mut().set_engine_force(engine_power * 25.0);
-            // (self).base_mut().set_brake(breaking_power*5.0);
-            self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS) as f32);
+            self.base_mut().set_steering(steering_angle.clamp(-DEGREES_30_RADIANS, DEGREES_30_RADIANS));
+
+            if outputs.len() == 3 {
+                let breaking_power = outputs.get(2).unwrap().clamp(0.0, 1.0);
+
+                self.base_mut().set_brake(breaking_power*5.0);
+            }
 
             let collision_detection = self.base().get_node_as::<Area3D>("CollisionDetection");
 
@@ -192,7 +196,7 @@ impl IVehicleBody3D for AgentVehicleBody {
                 self.collision_countdown = 20
             }
 
-            if self.collision_countdown == 0 || speed < 0.0 {
+            if self.collision_countdown == 0 || (engine_power < 1e-3 && speed <= 1e-3) {
                 self.signals().on_collide().emit()
             }
 
