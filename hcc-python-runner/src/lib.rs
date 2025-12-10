@@ -187,13 +187,13 @@ impl IVehicleBody3D for AgentVehicleBody {
             let collision_detection = self.base().get_node_as::<Area3D>("CollisionDetection");
 
             if collision_detection.has_overlapping_bodies() {
-                if speed < 0.0 || self.collision_countdown == 0 {
-                    self.signals().on_collide().emit()
-                }
-
                 self.collision_countdown -= 1
             } else {
                 self.collision_countdown = 20
+            }
+
+            if self.collision_countdown == 0 || speed < 0.0 {
+                self.signals().on_collide().emit()
             }
 
             self.last_speed = speed;

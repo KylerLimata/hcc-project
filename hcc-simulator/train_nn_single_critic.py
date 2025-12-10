@@ -12,7 +12,7 @@ max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
 max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
-ws = 0.3 # Steering reward weight
+ws = 0.5 # Steering reward weight
 we = 1 - ws # Engine reward weight
 
 ## Entropy parameters
