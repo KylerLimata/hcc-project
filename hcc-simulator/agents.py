@@ -8,8 +8,8 @@ class DebugAgent:
         return [1.0, -1.0]
 
 class BaselineAgent:
-    def __init__(self):
-        pass
+    def __init__(self, breaking=False):
+        self.breaking = breaking
     
     def eval(self, inputs: list[float], state: list[float]):
         import math
@@ -40,11 +40,15 @@ class BaselineAgent:
         target_speed = 0.5*(forward_dist_interp)
         speed_err = speed - target_speed
         engine_power = 0.0
+        breaking_power = 0.0
 
         if speed_err < 1.0:
             engine_power = 1.0
         elif speed_err > 1.0:
-            engine_power = -1.0
+            if self.breaking:
+                breaking_power = 1.0
+            else:
+                engine_power = -1.0
 
         side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
         forward_dist_diff_norm = max(-1.0, min(1.0, (forward_side_diff)/10.0))
@@ -62,7 +66,7 @@ class BaselineAgent:
         elif steering_err < -1.0*(math.pi/180.0):
             steering_power = 1.0
             
-        return [engine_power, steering_power]
+        return [engine_power, steering_power, breaking_power]
     
     def clamp(x, lo, hi):
         return max(lo, min(hi, x))
