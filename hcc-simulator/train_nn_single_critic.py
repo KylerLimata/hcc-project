@@ -127,7 +127,7 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times):
                 baseline_time = baseline_checkpoint_times[j]
                 nn_time = checkpoint_times[j]
-                # reward += 0.1*np.maximum(baseline_time - nn_time, 0)
+                reward += 0.1*np.maximum(baseline_time - nn_time, 0)
 
             # Steering rewards/penalties
             steering_reward = 0.0
