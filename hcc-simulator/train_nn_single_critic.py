@@ -13,7 +13,7 @@ max_steps = max_seconds_per_episode*60
 max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 base_entropy_coef = 0.1      # increase if too weak later
-ws = 0.5 # Steering reward weight
+ws = 0.3 # Steering reward weight
 we = 1 - ws # Engine reward weight
     
 # Load baseline checkpoint times
@@ -181,7 +181,7 @@ while episode_count < max_episodes:
             steering_factor = abs(steering_angle)
 
             if engine_power == -1:
-                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor) - (0 if speed > 1.0 else 10.0*(speed - 1.0))
+                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor) - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
             elif engine_power == 0:
                 engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
             elif engine_power == 1:
