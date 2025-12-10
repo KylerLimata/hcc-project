@@ -76,7 +76,8 @@ class NNAgent:
             self, 
             model, 
             num_steering_actions: int, 
-            num_engine_actions: int
+            num_engine_actions: int,
+            breaking=False
             ):
         import tensorflow as tf
         import numpy as np
@@ -102,6 +103,7 @@ class NNAgent:
         self.num_engine_actions = num_engine_actions
         self.state_history = []
         self.action_history = []
+        self.breaking = breaking
 
     def apply_activation(self, x, activation):
         import tensorflow as tf
@@ -155,9 +157,13 @@ class NNAgent:
 
         engine_power = 0.0
         steering_power = 0.0
+        breaking_power = 0.0
 
         if engine_action == 0:
-            engine_power = -1.0
+            if self.breaking:
+                breaking_power = 1.0
+            else:
+                engine_power = -1.0
         elif engine_action == 1:
             engine_power = 0.0
         else:
@@ -170,7 +176,7 @@ class NNAgent:
         else:
             steering_power = 1.0
 
-        return [engine_power, steering_power]
+        return [engine_power, steering_power, breaking_power]
     
 class NNEngineAgent:
     def __init__(

@@ -14,6 +14,7 @@ max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 ws = 0.5 # Steering reward weight
 we = 1 - ws # Engine reward weight
+breaking = True # Whether the agent slows down by breaking instead of reverse throttle
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
@@ -54,7 +55,7 @@ while episode_count < max_episodes:
 
     episode_reward = 0
     # Create agent and run episode to get states
-    agent = agents.NNAgent(model, num_steering_actions, num_engine_actions)
+    agent = agents.NNAgent(model, num_steering_actions, num_engine_actions, breaking=breaking)
     sim.print(f"Running single-critic training episode {episode_count + 1}.")
     handle = sim.run_episode(agent, max_steps)
 
@@ -103,9 +104,13 @@ while episode_count < max_episodes:
             # Steering and engine power
             steering_power = 0.0
             engine_power = 0.0
+            breaking_power = 0.0
 
             if steering_action == 0:
-                steering_power = -1.0
+                if breaking:
+                    breaking_power = 1.0
+                else:
+                    steering_power = -1.0
             elif steering_action == 1:
                 steering_power = 0.0
             else:
@@ -185,14 +190,14 @@ while episode_count < max_episodes:
             speed_factor = max(0.0, 0.1*speed)
             steering_factor = abs(steering_angle)
 
-            if engine_power == -1:
+            if engine_power == -1.0 or breaking_power == 1.0:
                 engine_reward += 10.0*speed_err*(side_error_factor + steering_factor)
-            elif engine_power == 0:
+            elif engine_power == 0.0:
                 engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
-            elif engine_power == 1:
+            elif engine_power == 1.0:
                 engine_reward += -10.0*speed_err*(side_error_factor + steering_factor)
             else:
-                sim.print("Invalid engine power!")
+                sim.print("Invalid engine or breaking power!")
 
             # Compute final reward
             reward += ws*steering_reward + we*engine_reward

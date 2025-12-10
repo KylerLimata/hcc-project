@@ -196,7 +196,7 @@ impl IVehicleBody3D for AgentVehicleBody {
                 self.collision_countdown = 20
             }
 
-            if self.collision_countdown == 0 || (engine_power < 1e-3 && speed <= 1e-3) {
+            if self.collision_countdown == 0 {
                 self.signals().on_collide().emit()
             }
 
