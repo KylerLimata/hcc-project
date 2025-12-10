@@ -178,6 +178,7 @@ while episode_count < max_episodes:
             forward_dist_interp = (1 - q)*forward_dist + q*projected_dist
 
             target_speed = 0.5*(forward_dist_interp)
+            target_speed = min((1.0, target_speed))
             speed_err = speed - target_speed
 
             side_error_factor = abs(side_dist_diff)
@@ -185,7 +186,7 @@ while episode_count < max_episodes:
             steering_factor = abs(steering_angle)
 
             if engine_power == -1:
-                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor) - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor)
             elif engine_power == 0:
                 engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
             elif engine_power == 1:
