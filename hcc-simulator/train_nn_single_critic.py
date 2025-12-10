@@ -12,9 +12,13 @@ max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
 max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
-base_entropy_coef = 0.1      # increase if too weak later
 ws = 0.3 # Steering reward weight
 we = 1 - ws # Engine reward weight
+
+## Entropy parameters
+entropy_coef = 0.1      # increase if too weak later
+steering_entropy_coef = 0.3
+engine_entropy_coef = 1.0
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -229,9 +233,8 @@ while episode_count < max_episodes:
         # Entropy
         steering_entropy = -tf.reduce_sum(steering_probs * tf.math.log(steering_probs + eps), axis=1)
         engine_entropy = -tf.reduce_sum(steering_probs * tf.math.log(steering_probs + eps), axis=1)
-        entropy = steering_entropy + engine_entropy
+        entropy = steering_entropy_coef*steering_entropy + engine_entropy_coef*engine_entropy
         entropy_loss = tf.reduce_mean(entropy)
-        entropy_coef = base_entropy_coef
 
         # Actor + Critic losses
         action_probs_history = steering_action_probs_history + engine_action_probs_history
