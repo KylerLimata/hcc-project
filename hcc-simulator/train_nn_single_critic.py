@@ -191,11 +191,19 @@ while episode_count < max_episodes:
             steering_factor = abs(steering_angle)
 
             if engine_power == -1.0 or breaking_power == 1.0:
-                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor) - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                engine_reward += (
+                    10.0*speed_err*(side_error_factor + steering_factor) 
+                    + (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                    + (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
+                )
             elif engine_power == 0.0:
                 engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
             elif engine_power == 1.0:
-                engine_reward += -10.0*speed_err*(side_error_factor + steering_factor) + (0.0 if speed > 1.0 else 30.0*(1.0 - speed))
+                engine_reward += (
+                    -10.0*speed_err*(side_error_factor + steering_factor) 
+                    - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                    - (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
+                )
             else:
                 sim.print("Invalid engine or breaking power!")
 
