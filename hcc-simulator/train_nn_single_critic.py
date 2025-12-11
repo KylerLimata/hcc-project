@@ -12,7 +12,7 @@ max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
 max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
-ws = 0.3 # Steering reward weight
+ws = 0.5 # Steering reward weight
 we = 1 - ws # Engine reward weight
 breaking = False # Whether the agent slows down by breaking instead of reverse throttle
 
@@ -43,7 +43,7 @@ critic = layers.Dense(1, activation="linear", name="critic_out")(common)
 model = keras.Model(inputs=inputs, outputs=[action_steering, action_engine, critic])
 
 # Train neural network agent
-optimizer = keras.optimizers.Adam(learning_rate=3e-3)
+optimizer = keras.optimizers.Adam(learning_rate=3e-4)
 huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
@@ -156,7 +156,7 @@ while episode_count < max_episodes:
             steering_err_norm = 2*steering_err / (np.pi / 3)
 
             side_error_factor = abs(side_dist_diff)
-            speed_factor = max(0.0, 0.1*speed)
+            speed_factor = max(0.0, 1.5*speed)
 
             if steering_power == -1:
                 steering_reward += 10.0*steering_err_norm*(side_error_factor + speed_factor)
@@ -204,9 +204,9 @@ while episode_count < max_episodes:
             rewards_history.append(reward)
 
             # Debugging
-            if step % 20 == 0:
-                sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
-                sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({reward:.2f}, {steering_reward:.2f}, {engine_reward:.2f})")
+            # if step % 20 == 0:
+            #     sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
+            #     sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({reward:.2f}, {steering_reward:.2f}, {engine_reward:.2f})")
             
         
         if terminated:
