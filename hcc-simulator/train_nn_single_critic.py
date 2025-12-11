@@ -14,7 +14,7 @@ max_episodes = 1000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 ws = 0.3 # Steering reward weight
 we = 1 - ws # Engine reward weight
-breaking = True # Whether the agent slows down by breaking instead of reverse throttle
+breaking = False # Whether the agent slows down by breaking instead of reverse throttle
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
