@@ -10,7 +10,7 @@ seed = 42
 gamma = 0.8  # Discount factor for past rewards
 max_seconds_per_episode = 60
 max_steps = max_seconds_per_episode*60
-max_episodes = 1000
+max_episodes = 2000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 ws = 0.5 # Steering reward weight
 we = 1 - ws # Engine reward weight
@@ -18,8 +18,8 @@ breaking = False # Whether the agent slows down by breaking instead of reverse t
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
-steering_entropy_coef = 0.3
-engine_entropy_coef = 1.0
+steering_entropy_coef = 0.5
+engine_entropy_coef = 0.9
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
