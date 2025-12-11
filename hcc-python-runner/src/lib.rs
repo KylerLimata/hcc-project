@@ -185,7 +185,7 @@ impl IVehicleBody3D for AgentVehicleBody {
             if outputs.len() == 3 {
                 let breaking_power = outputs.get(2).unwrap().clamp(0.0, 1.0);
 
-                self.base_mut().set_brake(breaking_power*5.0);
+                self.base_mut().set_brake(breaking_power*1.0);
             }
 
             let collision_detection = self.base().get_node_as::<Area3D>("CollisionDetection");
