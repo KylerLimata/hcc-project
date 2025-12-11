@@ -128,6 +128,11 @@ class NNAgent:
     def eval(self, inputs: list[float], state: list[float]):
         import numpy as np
 
+        # Unpack state vec
+        speed = state[0]
+        steering_angle = state[1]
+
+
         # Convert inputs and state into single numpy array
         x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
         
@@ -162,7 +167,8 @@ class NNAgent:
         if engine_action == 0:
             if self.breaking:
                 breaking_power = 1.0
-            else:
+            # Arbitrarily prevent reverse throttle at slow speeds
+            elif speed > 0.5:
                 engine_power = -1.0
         elif engine_action == 1:
             engine_power = 0.0
