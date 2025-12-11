@@ -107,17 +107,17 @@ while episode_count < max_episodes:
             breaking_power = 0.0
 
             if steering_action == 0:
-                if breaking:
-                    breaking_power = 1.0
-                else:
-                    engine_power = -1.0
+                steering_power = -1.0
             elif steering_action == 1:
                 steering_power = 0.0
             else:
                 steering_power = 1.0
 
             if engine_action == 0:
-                engine_power = -1.0
+                if breaking:
+                    breaking_power = 1.0
+                else:
+                    engine_power = -1.0
             elif engine_action == 1:
                 engine_power = 0.0
             else:
