@@ -238,7 +238,7 @@ while episode_count < max_episodes:
 
         # Entropy
         steering_entropy = -tf.reduce_sum(steering_probs * tf.math.log(steering_probs + eps), axis=1)
-        engine_entropy = -tf.reduce_sum(steering_probs * tf.math.log(steering_probs + eps), axis=1)
+        engine_entropy = -tf.reduce_sum(engine_probs * tf.math.log(steering_probs + eps), axis=1)
         entropy = steering_entropy_coef*steering_entropy + engine_entropy_coef*engine_entropy
         entropy_loss = tf.reduce_mean(entropy)
 
