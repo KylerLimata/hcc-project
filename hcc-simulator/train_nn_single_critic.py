@@ -18,8 +18,8 @@ breaking = True # Whether the agent slows down by breaking instead of reverse th
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
-steering_entropy_coef = 0.3
-engine_entropy_coef = 1.0
+steering_entropy_coef = 0.5
+engine_entropy_coef = 0.5
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
