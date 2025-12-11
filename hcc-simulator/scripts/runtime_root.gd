@@ -14,6 +14,7 @@ var finished: bool = false
 func load_environment(env_name: String):
 	if current_environment != null:
 		remove_child(current_environment)
+		current_environment.queue_free()
 	
 	var scene = load("res://scenes/environments/" + env_name + ".tscn").instantiate()
 	current_environment = scene
@@ -51,6 +52,7 @@ func _physics_process(_delta: float) -> void:
 		if finished:
 			emit_signal("complete_episode", checkpoint_times, terminated, current_step)
 			current_environment.remove_child(current_agent_node)
+			current_agent_node.queue_free()
 			current_agent_node = null
 			current_agent = null
 			$VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/RunButton.disabled = false
