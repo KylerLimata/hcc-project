@@ -143,7 +143,7 @@ while episode_count < max_episodes:
                 total_checkpoints = len(checkpoint_times)
                 baseline_endstep = baseline_checkpoint_times[-1]
                 current_checkpoint = j + 1
-                progress = current_checkpoint/total_checkpoints
+                progress = 100*(current_checkpoint/total_checkpoints)
                 checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
 
                 # baseline_time = baseline_checkpoint_times[j]
