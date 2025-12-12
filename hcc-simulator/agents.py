@@ -31,7 +31,7 @@ class BaselineAgent:
         if left_forward_dist < right_forward_dist:
             forward_side_dist = left_forward_dist
         else:
-            right_forward_dist = right_forward_dist
+            forward_side_dist = right_forward_dist
 
         projected_dist = forward_side_dist*math.cos(math.pi/6.0)
         w = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)

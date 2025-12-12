@@ -191,14 +191,14 @@ while episode_count < max_episodes:
             if left_forward_dist < right_forward_dist:
                 forward_side_dist = left_forward_dist
             else:
-                right_forward_dist = right_forward_dist
+                forward_side_dist = right_forward_dist
 
             projected_dist = forward_side_dist*np.cos(np.pi/6.0)
             q = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
             forward_dist_interp = (1 - q)*forward_dist + q*projected_dist
 
             target_speed = 0.5*(forward_dist_interp)
-            target_speed = min((1.0, target_speed))
+            target_speed = min(1.0, target_speed)
             speed_err = speed - target_speed
 
             side_error_factor = abs(side_dist_diff)

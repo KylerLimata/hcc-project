@@ -94,8 +94,6 @@ while episode_count < max_episodes:
         # Compute Rewards
         j = 0 # Checkpoint times history
 
-        sim.print("Here!")
-
         for step, (state, action) in enumerate(zip(agent.state_history, agent.action_history)):
             # Inputs
             left_dist = state[0]
@@ -237,8 +235,6 @@ while episode_count < max_episodes:
             # if step % 20 == 0:
             #     sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
             #     sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({steering_reward:.2f}, {engine_reward:.2f})")
-            
-        print("Here!")
         
         if terminated:
             crash_penalty = 50 * (1.0 - (end_step / max_steps))
