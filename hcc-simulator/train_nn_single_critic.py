@@ -171,7 +171,7 @@ while episode_count < max_episodes:
             steering_err_norm = 2*steering_err / (np.pi / 3)
 
             side_error_factor = abs(side_dist_diff)
-            speed_factor = max(0.0, 1.5*speed)
+            speed_factor = max(0.0, 0.1*speed)
 
             if steering_power == -1:
                 steering_reward += 10.0*steering_err_norm*(side_error_factor + speed_factor)
@@ -212,7 +212,7 @@ while episode_count < max_episodes:
                     + (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
                 )
             elif engine_power == 0.0:
-                engine_reward += (30.0 if abs(speed_err) < 0.5 else -30.0)
+                engine_reward += (10.0 if abs(speed_err) < 0.1 else -10.0)
             elif engine_power == 1.0:
                 engine_reward += (
                     -10.0*speed_err*(side_error_factor + steering_factor) 
