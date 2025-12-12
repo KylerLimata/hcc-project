@@ -20,7 +20,7 @@ steering_entropy_coef = 0.5
 engine_entropy_coef = 0.9
 
 ## Reward Parameters
-ws = 0.5 # Steering reward weight
+ws = 0.3 # Steering reward weight
 we = 1 - ws # Engine reward weight
 ch_s = 0.3 # Checkpoint reward coefficient for steering reward
 ch_e = 1.1 # Checkpoint reward coefficient for engine reward
@@ -212,7 +212,7 @@ while episode_count < max_episodes:
                     + (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
                 )
             elif engine_power == 0.0:
-                engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
+                engine_reward += (30.0 if abs(speed_err) < 0.5 else -30.0)
             elif engine_power == 1.0:
                 engine_reward += (
                     -10.0*speed_err*(side_error_factor + steering_factor) 
@@ -227,9 +227,9 @@ while episode_count < max_episodes:
             rewards_history.append(reward)
 
             # Debugging
-            # if step % 20 == 0:
-            #     sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
-            #     sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({reward:.2f}, {steering_reward:.2f}, {engine_reward:.2f})")
+            if step % 20 == 0:
+                sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
+                sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({reward:.2f}, {steering_reward:.2f}, {engine_reward:.2f})")
             
         
         if terminated:
