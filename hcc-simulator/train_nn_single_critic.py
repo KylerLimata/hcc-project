@@ -16,14 +16,14 @@ breaking = False # Whether the agent slows down by breaking instead of reverse t
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
-steering_entropy_coef = 0.5
-engine_entropy_coef = 0.9
+steering_entropy_coef = 1.0
+engine_entropy_coef = 0.3
 
 ## Reward Parameters
-ws = 0.3 # Steering reward weight
+ws = 0.5 # Steering reward weight
 we = 1 - ws # Engine reward weight
-ch_s = 0.3 # Checkpoint reward coefficient for steering reward
-ch_e = 1.1 # Checkpoint reward coefficient for engine reward
+ch_s = 0.5 # Checkpoint reward coefficient for steering reward
+ch_e = 0.8 # Checkpoint reward coefficient for engine reward
 steps_survived_after_checkpoint = 120 # How many steps the agent needs to survive after the checkpoint to get the reward
     
 # Load baseline checkpoint times
