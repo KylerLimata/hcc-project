@@ -7,7 +7,7 @@ import agents
 
 # Configuration parameters for the whole setup
 seed = 42
-gamma = 0.8  # Discount factor for past rewards
+gamma = 0.99  # Discount factor for past rewards
 max_seconds_per_episode = 30
 max_steps = max_seconds_per_episode*60
 max_episodes = 2000
@@ -20,11 +20,11 @@ steering_entropy_coef = 1.0
 engine_entropy_coef = 0.3
 
 ## Reward Parameters
-ws = 0.5 # Steering reward weight
+ws = 0.4 # Steering reward weight
 we = 1 - ws # Engine reward weight
-ch_s = 0.5 # Checkpoint reward coefficient for steering reward
+ch_s = 0.2 # Checkpoint reward coefficient for steering reward
 ch_e = 0.8 # Checkpoint reward coefficient for engine reward
-steps_survived_after_checkpoint = 120 # How many steps the agent needs to survive after the checkpoint to get the reward
+steps_survived_after_checkpoint = 600 # How many steps the agent needs to survive after the checkpoint to get the reward
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -154,7 +154,7 @@ while episode_count < max_episodes:
                 # reward += 0.1*np.maximum(baseline_time - nn_time, 0)
 
             # Steering rewards/penalties
-            steering_reward = ch_s*checkpoint_reward
+            steering_reward = 0.0
             side_dist_diff = left_dist - right_dist
             side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
             forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
@@ -181,9 +181,12 @@ while episode_count < max_episodes:
                 steering_reward += -10.0*steering_err_norm*(side_error_factor + speed_factor)
             else:
                 sim.print("Invalid steering power!")
+
+            if steering_reward > 0.0:
+                steering_reward += ch_s*checkpoint_reward
             
             # Engine rewards/penalties
-            engine_reward = ch_e*checkpoint_reward
+            engine_reward = 0.0
             forward_side_diff = left_forward_dist - right_forward_dist
             forward_side_sum = left_forward_dist + right_forward_dist
             forward_side_dist = forward_dist
@@ -221,6 +224,9 @@ while episode_count < max_episodes:
                 )
             else:
                 sim.print("Invalid engine or breaking power!")
+
+            if engine_reward > 0.0:
+                engine_reward += ch_e*checkpoint_reward
 
             # Compute final reward
             reward = ws*steering_reward + we*engine_reward
