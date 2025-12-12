@@ -1,0 +1,55 @@
+[gd_scene load_steps=5 format=3 uid="uid://b0gmxd7nsweff"]
+
+[ext_resource type="Script" uid="uid://i5wn2vfor5l3" path="res://scripts/environment.gd" id="1_sin0y"]
+[ext_resource type="Script" uid="uid://cj5lxdhxn8nhc" path="res://scripts/track.gd" id="2_pypiv"]
+[ext_resource type="PackedScene" uid="uid://d2twlygj6e7gr" path="res://scenes/track/straight_track_piece.tscn" id="3_7m1rm"]
+[ext_resource type="PackedScene" uid="uid://cadrg823rbyi2" path="res://scenes/track/checkpoint.tscn" id="4_7m1rm"]
+
+[node name="TrainingCourseFour" type="Node3D"]
+script = ExtResource("1_sin0y")
+metadata/_custom_type_script = "uid://i5wn2vfor5l3"
+
+[node name="Track" type="Node3D" parent="."]
+script = ExtResource("2_pypiv")
+metadata/_custom_type_script = "uid://cj5lxdhxn8nhc"
+
+[node name="StraightTrackPiece" parent="Track" instance=ExtResource("3_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+length = 2.0
+
+[node name="StraightTrackPiece2" parent="Track" instance=ExtResource("3_7m1rm")]
+length = 2.0
+
+[node name="Checkpoint" parent="Track" instance=ExtResource("4_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+
+[node name="StraightTrackPiece3" parent="Track" instance=ExtResource("3_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+length = 4.0
+
+[node name="Checkpoint2" parent="Track" instance=ExtResource("4_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+
+[node name="StraightTrackPiece4" parent="Track" instance=ExtResource("3_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+length = 8.0
+
+[node name="Checkpoint3" parent="Track" instance=ExtResource("4_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
+
+[node name="StraightTrackPiece5" parent="Track" instance=ExtResource("3_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
+length = 12.0
+
+[node name="Checkpoint4" parent="Track" instance=ExtResource("4_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 26)
+final = true
+
+[node name="StraightTrackPiece6" parent="Track" instance=ExtResource("3_7m1rm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 26)
+length = 12.0
+
+[connection signal="checkpoint_activated" from="Track/Checkpoint" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint2" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint3" to="." method="on_checkpoint_activated"]
+[connection signal="checkpoint_activated" from="Track/Checkpoint4" to="." method="on_checkpoint_activated"]

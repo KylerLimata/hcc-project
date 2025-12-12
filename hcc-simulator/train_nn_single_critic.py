@@ -8,18 +8,22 @@ import agents
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.8  # Discount factor for past rewards
-max_seconds_per_episode = 60
+max_seconds_per_episode = 15
 max_steps = max_seconds_per_episode*60
 max_episodes = 2000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
-ws = 0.5 # Steering reward weight
-we = 1 - ws # Engine reward weight
 breaking = False # Whether the agent slows down by breaking instead of reverse throttle
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
 steering_entropy_coef = 0.5
 engine_entropy_coef = 0.9
+
+## Reward Parameters
+ws = 0.5 # Steering reward weight
+we = 1 - ws # Engine reward weight
+ch_s = 0.3 # Checkpoint reward coefficient for steering reward
+ch_e = 1.1 # Checkpoint reward coefficient for engine reward
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -51,7 +55,7 @@ rewards_history = []
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment_new")
+    sim.load_environment("training_course_four")
 
     episode_reward = 0
     # Create agent and run episode to get states
@@ -133,13 +137,21 @@ while episode_count < max_episodes:
             if j < len(checkpoint_times) and step > checkpoint_times[j]:
                 j += 1
 
-            if j < len(checkpoint_times):
-                baseline_time = baseline_checkpoint_times[j]
-                nn_time = checkpoint_times[j]
-                reward += 0.1*np.maximum(baseline_time - nn_time, 0)
+            checkpoint_reward = 0.0
+
+            if j < len(checkpoint_times) and step == checkpoint_times[j]:
+                total_checkpoints = len(checkpoint_times)
+                baseline_endstep = baseline_checkpoint_times[-1]
+                current_checkpoint = j + 1
+                progress = current_checkpoint/total_checkpoints
+                checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
+
+                # baseline_time = baseline_checkpoint_times[j]
+                # nn_time = checkpoint_times[j]
+                # reward += 0.1*np.maximum(baseline_time - nn_time, 0)
 
             # Steering rewards/penalties
-            steering_reward = 0.0
+            steering_reward = ch_s*checkpoint_reward
             side_dist_diff = left_dist - right_dist
             side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
             forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
@@ -168,7 +180,7 @@ while episode_count < max_episodes:
                 sim.print("Invalid steering power!")
             
             # Engine rewards/penalties
-            engine_reward = 0.0
+            engine_reward = ch_e*checkpoint_reward
             forward_side_diff = left_forward_dist - right_forward_dist
             forward_side_sum = left_forward_dist + right_forward_dist
             forward_side_dist = forward_dist
@@ -208,7 +220,7 @@ while episode_count < max_episodes:
                 sim.print("Invalid engine or breaking power!")
 
             # Compute final reward
-            reward += ws*steering_reward + we*engine_reward
+            reward = ws*steering_reward + we*engine_reward
             rewards_history.append(reward)
 
             # Debugging
