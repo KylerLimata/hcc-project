@@ -8,7 +8,7 @@ import agents
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.8  # Discount factor for past rewards
-max_seconds_per_episode = 15
+max_seconds_per_episode = 30
 max_steps = max_seconds_per_episode*60
 max_episodes = 2000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
@@ -139,7 +139,7 @@ while episode_count < max_episodes:
 
             checkpoint_reward = 0.0
 
-            if j < len(checkpoint_times) and step == checkpoint_times[j]:
+            if j < len(checkpoint_times) and step <= checkpoint_times[j]:
                 total_checkpoints = len(checkpoint_times)
                 baseline_endstep = baseline_checkpoint_times[-1]
                 current_checkpoint = j + 1
