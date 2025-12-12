@@ -24,6 +24,7 @@ ws = 0.5 # Steering reward weight
 we = 1 - ws # Engine reward weight
 ch_s = 0.3 # Checkpoint reward coefficient for steering reward
 ch_e = 1.1 # Checkpoint reward coefficient for engine reward
+steps_survived_after_checkpoint = 120 # How many steps the agent needs to survive after the checkpoint to get the reward
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -144,7 +145,9 @@ while episode_count < max_episodes:
                 baseline_endstep = baseline_checkpoint_times[-1]
                 current_checkpoint = j + 1
                 progress = 100*(current_checkpoint/total_checkpoints)
-                checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
+
+                if j == len(checkpoint_times) - 1 or end_step - steps_survived_after_checkpoint > step:
+                    checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
 
                 # baseline_time = baseline_checkpoint_times[j]
                 # nn_time = checkpoint_times[j]
