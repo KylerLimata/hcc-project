@@ -8,18 +8,23 @@ import agents
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.8  # Discount factor for past rewards
-max_seconds_per_episode = 60
+max_seconds_per_episode = 30
 max_steps = max_seconds_per_episode*60
-max_episodes = 1000
+max_episodes = 2000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
-ws = 0.3 # Steering reward weight
-we = 1 - ws # Engine reward weight
 breaking = False # Whether the agent slows down by breaking instead of reverse throttle
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
 steering_entropy_coef = 0.5
-engine_entropy_coef = 0.5
+engine_entropy_coef = 0.9
+
+## Reward Parameters
+ws = 0.3 # Steering reward weight
+we = 1 - ws # Engine reward weight
+ch_s = 0.3 # Checkpoint reward coefficient for steering reward
+ch_e = 1.1 # Checkpoint reward coefficient for engine reward
+steps_survived_after_checkpoint = 120 # How many steps the agent needs to survive after the checkpoint to get the reward
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -46,19 +51,19 @@ model = keras.Model(inputs=inputs, outputs=[action_steering, action_engine, crit
 # Train neural network agent
 optimizer = keras.optimizers.Adam(learning_rate=3e-3)
 huber_loss = keras.losses.Huber()
-engine_action_probs_history = []
+engine_probs_history = []
 critic_value_history = []
 steering_rewards_history = []
 engine_rewards_history = []
 episode_count = 0
 
 while episode_count < max_episodes:
-    sim.load_environment("training_environment_new")
+    sim.load_environment("training_course_four")
 
     steering_episode_reward = 0
     # Create agent and run episode to get states
     agent = agents.NNAgent(model, num_steering_actions, num_engine_actions, breaking=breaking)
-    sim.print(f"Running single-critic training episode {episode_count + 1}.")
+    sim.print(f"Running dual-critic training episode {episode_count + 1}.")
     handle = sim.run_episode(agent, max_steps)
 
     while True:
@@ -79,15 +84,17 @@ while episode_count < max_episodes:
 
         # Extract chosen action probabilities
         steering_indices = tf.constant([a[0] for a in action_history], dtype=tf.int32)
-        steering_action_probs_history = tf.gather(steering_probs, steering_indices, axis=1, batch_dims=1)
-        steering_action_probs_history = tf.math.log(tf.clip_by_value(steering_action_probs_history, eps, 1.0))
+        steering_probs_history = tf.gather(steering_probs, steering_indices, axis=1, batch_dims=1)
+        steering_probs_history = tf.math.log(tf.clip_by_value(steering_probs_history, eps, 1.0))
 
         engine_indices = tf.constant([a[1] for a in action_history], dtype=tf.int32)
-        engine_action_probs_history = tf.gather(engine_probs, steering_indices, axis=1, batch_dims=1)
-        engine_action_probs_history = tf.math.log(tf.clip_by_value(engine_action_probs_history, eps, 1.0))
+        engine_probs_history = tf.gather(engine_probs, engine_indices, axis=1, batch_dims=1)
+        engine_probs_history = tf.math.log(tf.clip_by_value(engine_probs_history, eps, 1.0))
 
         # Compute Rewards
         j = 0 # Checkpoint times history
+
+        sim.print("Here!")
 
         for step, (state, action) in enumerate(zip(agent.state_history, agent.action_history)):
             # Inputs
@@ -126,21 +133,32 @@ while episode_count < max_episodes:
                 engine_power = 1.0
             
             # Define tolerance for "centered"
-            center_tolerance = 0.1            
+            center_tolerance = 0.1
+
+            # Initialize reward
+            reward = 0.0
 
             # Checkpoint reward
-            checkpoint_reward = 0.0
-
             if j < len(checkpoint_times) and step > checkpoint_times[j]:
                 j += 1
 
-            if j < len(checkpoint_times):
-                baseline_time = baseline_checkpoint_times[j]
-                nn_time = checkpoint_times[j]
-                checkpoint_reward += 0.1*np.maximum(baseline_time - nn_time, 0)
+            checkpoint_reward = 0.0
+
+            if j < len(checkpoint_times) and step <= checkpoint_times[j]:
+                total_checkpoints = len(checkpoint_times)
+                baseline_endstep = baseline_checkpoint_times[-1]
+                current_checkpoint = j + 1
+                progress = 100*(current_checkpoint/total_checkpoints)
+
+                if j == len(checkpoint_times) - 1 or end_step - steps_survived_after_checkpoint > step:
+                    checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
+
+                # baseline_time = baseline_checkpoint_times[j]
+                # nn_time = checkpoint_times[j]
+                # reward += 0.1*np.maximum(baseline_time - nn_time, 0)
 
             # Steering rewards/penalties
-            steering_reward = 0.0
+            steering_reward = ch_s*checkpoint_reward
             side_dist_diff = left_dist - right_dist
             side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
             forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
@@ -167,11 +185,9 @@ while episode_count < max_episodes:
                 steering_reward += -10.0*steering_err_norm*(side_error_factor + speed_factor)
             else:
                 sim.print("Invalid steering power!")
-
-            steering_rewards_history.append(steering_reward)
             
             # Engine rewards/penalties
-            engine_reward = 0.0
+            engine_reward = ch_e*checkpoint_reward
             forward_side_diff = left_forward_dist - right_forward_dist
             forward_side_sum = left_forward_dist + right_forward_dist
             forward_side_dist = forward_dist
@@ -179,14 +195,14 @@ while episode_count < max_episodes:
             if left_forward_dist < right_forward_dist:
                 forward_side_dist = left_forward_dist
             else:
-                right_forward_dist = right_forward_dist
+                forward_side_dist = right_forward_dist
 
             projected_dist = forward_side_dist*np.cos(np.pi/6.0)
             q = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
             forward_dist_interp = (1 - q)*forward_dist + q*projected_dist
 
             target_speed = 0.5*(forward_dist_interp)
-            target_speed = min((1.0, target_speed))
+            target_speed = min(1.0, target_speed)
             speed_err = speed - target_speed
 
             side_error_factor = abs(side_dist_diff)
@@ -194,25 +210,35 @@ while episode_count < max_episodes:
             steering_factor = abs(steering_angle)
 
             if engine_power == -1.0 or breaking_power == 1.0:
-                engine_reward += 10.0*speed_err*(side_error_factor + steering_factor) - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                engine_reward += (
+                    10.0*speed_err*(side_error_factor + steering_factor) 
+                    + (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                    + (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
+                )
             elif engine_power == 0.0:
-                engine_reward += (20.0 if abs(speed_err) < 0.5 else -20.0)
+                engine_reward += (10.0 if abs(speed_err) < 0.1 else -10.0)
             elif engine_power == 1.0:
-                engine_reward += -10.0*speed_err*(side_error_factor + steering_factor) + (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                engine_reward += (
+                    -10.0*speed_err*(side_error_factor + steering_factor) 
+                    - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                    - (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
+                )
             else:
                 sim.print("Invalid engine or breaking power!")
 
             engine_rewards_history.append(engine_reward + checkpoint_reward)
+            steering_rewards_history.append(steering_reward + checkpoint_reward)
 
             # Compute final reward
             # reward += ws*steering_reward + we*engine_reward
             # steering_rewards_history.append(reward)
 
             # Debugging
-            if step % 20 == 0:
-                sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
-                sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({steering_reward:.2f}, {engine_reward:.2f})")
+            # if step % 20 == 0:
+            #     sim.print(f"state = ({steering_angle:.2f} rad, {speed:.2f} m/s), input = ({left_dist:.2f} m, {left_forward_dist:.2f} m, {forward_dist:.2f} m, {right_forward_dist:.2f} m, {right_dist:.2f} m)")
+            #     sim.print(f"target = ({target_steering_angle:.2f} rad, {target_speed} m/s), action = ({steering_power:.0f}, {engine_power:.0f}, {breaking_power:.0f}), reward = ({steering_reward:.2f}, {engine_reward:.2f})")
             
+        print("Here!")
         
         if terminated:
             crash_penalty = 50 * (1.0 - (end_step / max_steps))
@@ -237,11 +263,6 @@ while episode_count < max_episodes:
 
             returns_steering.insert(0, discounted_sum_steering)
             returns_engine.insert(0, discounted_sum_engine)
-        
-        # Normalize Returns
-        returns = np.array(returns, dtype=np.float32)
-        returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
-        returns_tf = tf.convert_to_tensor(returns, dtype=tf.float32)
 
         # Normalize Returns
         returns_steering = np.array(returns_steering)
@@ -267,15 +288,18 @@ while episode_count < max_episodes:
 
         # Entropy
         steering_entropy = -tf.reduce_sum(steering_probs * tf.math.log(steering_probs + eps), axis=1)
-        engine_entropy = -tf.reduce_sum(steering_probs * tf.math.log(steering_probs + eps), axis=1)
+        engine_entropy = -tf.reduce_sum(engine_probs * tf.math.log(engine_probs + eps), axis=1)
         entropy = steering_entropy_coef*steering_entropy + engine_entropy_coef*engine_entropy
         entropy_loss = tf.reduce_mean(entropy)
 
         # Actor + Critic losses
-        action_probs_history = steering_action_probs_history + engine_action_probs_history
-        actor_losses = -tf.reduce_mean(action_probs_history * steering_diffs)
-        critic_losses = tf.reduce_mean(huber_loss(returns_tf, steering_values_tf))
-        loss_value = actor_losses + critic_losses - entropy_coef*entropy_loss
+        steering_loss = -tf.reduce_mean(steering_probs_history*steering_diffs)
+        engine_loss = -tf.reduce_mean(engine_probs_history*engine_diffs)
+        actor_losses = steering_loss + engine_loss
+        critic_loss_steering = tf.reduce_mean(huber_loss(returns_steering, steering_values_tf))
+        critic_loss_engine = tf.reduce_mean(huber_loss(returns_engine, engine_values_tf))
+        critic_losses = critic_loss_steering + critic_loss_engine
+        loss_value = actor_losses + critic_losses - entropy_loss
 
         # Backpropagation
         grads = tape.gradient(loss_value, model.trainable_variables)
