@@ -7,7 +7,6 @@ import agents
 
 # Configuration parameters for the whole setup
 seed = 42
-gamma = 0.8  # Discount factor for past rewards
 max_seconds_per_episode = 30
 max_steps = max_seconds_per_episode*60
 max_episodes = 2000
@@ -16,14 +15,13 @@ breaking = False # Whether the agent slows down by breaking instead of reverse t
 
 ## Entropy parameters
 entropy_coef = 0.1      # increase if too weak later
-steering_entropy_coef = 0.5
-engine_entropy_coef = 0.9
+steering_entropy_coef = 1.0
+engine_entropy_coef = 0.3
 
 ## Reward Parameters
-ws = 0.3 # Steering reward weight
-we = 1 - ws # Engine reward weight
-ch_s = 0.3 # Checkpoint reward coefficient for steering reward
-ch_e = 1.1 # Checkpoint reward coefficient for engine reward
+gamma = 0.8  # Discount factor for past rewards
+ch_s = 10.0 # Checkpoint reward coefficient for steering reward
+ch_e = 10.0 # Checkpoint reward coefficient for engine reward
 steps_survived_after_checkpoint = 120 # How many steps the agent needs to survive after the checkpoint to get the reward
     
 # Load baseline checkpoint times
@@ -93,7 +91,7 @@ while episode_count < max_episodes:
 
         # Compute Rewards
         j = 0 # Checkpoint times history
-
+        
         for step, (state, action) in enumerate(zip(agent.state_history, agent.action_history)):
             # Inputs
             left_dist = state[0]
@@ -184,6 +182,9 @@ while episode_count < max_episodes:
                 steering_reward += -10.0*steering_err_norm*(side_error_factor + speed_factor)
             else:
                 sim.print("Invalid steering power!")
+
+            steering_reward_sign = (0 if steering_reward == 0.0 else steering_reward/abs(steering_reward))
+            steering_rewards_history.append(steering_reward + steering_reward_sign*ch_s*checkpoint_reward)
             
             # Engine rewards/penalties
             engine_reward = ch_e*checkpoint_reward
@@ -225,8 +226,8 @@ while episode_count < max_episodes:
             else:
                 sim.print("Invalid engine or breaking power!")
 
+            engine_reward_sign = (0 if engine_reward == 0.0 else engine_reward/abs(engine_reward))
             engine_rewards_history.append(engine_reward + ch_e*checkpoint_reward)
-            steering_rewards_history.append(steering_reward + ch_s*checkpoint_reward)
 
             # Compute final reward
             # reward += ws*steering_reward + we*engine_reward
