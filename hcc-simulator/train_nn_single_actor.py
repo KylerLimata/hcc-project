@@ -1,0 +1,253 @@
+import numpy as np
+import keras
+from keras import ops
+from keras import layers
+import tensorflow as tf
+import agents
+
+# Configuration parameters for the whole setup
+seed = 42
+max_seconds_per_episode = 30
+max_steps = max_seconds_per_episode*60
+max_episodes = 1000
+eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
+breaking = False # Whether the agent slows down by breaking instead of reverse throttle
+
+## Entropy parameters
+base_entropy_coef = 0.1      # increase if too weak later
+
+## Reward Parameters
+gamma = 0.99  # Discount factor for past rewards
+ws = 0.5 # Steering reward weight
+we = 1 - ws # Engine reward weight
+ch_s = 10.0 # Checkpoint reward coefficient for steering reward
+ch_e = 10.0 # Checkpoint reward coefficient for engine reward
+steps_survived_after_checkpoint = 600 # How many steps the agent needs to survive after the checkpoint to get the reward
+
+# Load baseline checkpoint times
+baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
+
+# Setup actor critic network
+num_inputs = 7
+num_actions = 9
+num_hidden = 128
+
+initializer = tf.keras.initializers.RandomUniform(minval=-0.01, maxval=0.01)
+inputs = layers.Input(shape=(num_inputs,))
+common = layers.Dense(num_hidden, activation="relu")(inputs)
+action = layers.Dense(num_actions, activation="softmax", name = "steering_out",
+                             kernel_initializer=initializer, bias_initializer='zeros')(common)
+critic = layers.Dense(1, activation="linear", name="critic_out")(common)
+model = keras.Model(inputs=inputs, outputs=[action, critic])
+
+# Train neural network agent
+optimizer = keras.optimizers.Adam(learning_rate=3e-3)
+huber_loss = keras.losses.Huber()
+action_probs_history = []
+critic_value_history = []
+rewards_history = []
+episode_count = 0
+
+while episode_count < max_episodes:
+    sim.load_environment("training_course_four")
+
+    episode_reward = 0
+    # Create agent and run episode to get states
+    agent = agents.NNAgentSingleActor(model, num_actions)
+    sim.print(f"Running steering-only training episode {episode_count + 1}.")
+    handle = sim.run_episode(agent, max_steps)
+
+    while True:
+        if handle.is_done():
+            break
+
+    # Upack results
+    checkpoint_times, terminated, end_step = handle.get_result()
+    state_history = agent.state_history
+    action_history = agent.action_history
+
+    sim.print(f" Completed in {end_step} steps")
+
+    with tf.GradientTape() as tape:
+        states_tf = tf.convert_to_tensor(agent.state_history, dtype=tf.float32)
+        # Use actual model to calculate states, needed to compute gradients
+        action_probs, critic_values = model(states_tf, training=False)
+
+        # Extract chosen action probabilities
+        action_indicies = tf.constant(agent.action_history, dtype=tf.int32)
+        action_probs_history = tf.gather(action_probs, action_indicies, axis=1, batch_dims=1)
+        action_probs_history = tf.math.log(tf.clip_by_value(action_probs_history, eps, 1.0))
+
+        j = 0 # Checkpoint times history
+
+        # Compute Rewards
+        j = 0 # Checkpoint times history
+
+        for step, (state, action) in enumerate(zip(agent.state_history, agent.action_history)):
+            # Inputs
+            left_dist = state[0]
+            left_forward_dist = state[1]
+            forward_dist = state[2]
+            right_forward_dist = state[3]
+            right_dist = state[4]
+            # State
+            speed = state[5]
+            steering_angle = state[6]
+            # Actions
+            decoded = agent.decode_action(action)
+            steering_power = decoded[0]
+            engine_power = decoded[1]
+
+            # Define tolerance for "centered"
+            center_tolerance = 0.1
+
+            # Initialize reward
+            reward = 0.0
+
+            # Checkpoint reward
+            if j < len(checkpoint_times) and step > checkpoint_times[j]:
+                j += 1
+
+            checkpoint_reward = 0.0
+
+            if j < len(checkpoint_times) and step <= checkpoint_times[j]:
+                total_checkpoints = len(checkpoint_times)
+                baseline_endstep = baseline_checkpoint_times[-1]
+                current_checkpoint = j + 1
+                progress = 100*(current_checkpoint/total_checkpoints)
+
+                if j == len(checkpoint_times) - 1 or end_step - steps_survived_after_checkpoint > step:
+                    checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
+
+                # baseline_time = baseline_checkpoint_times[j]
+                # nn_time = checkpoint_times[j]
+                # reward += 0.1*np.maximum(baseline_time - nn_time, 0)
+
+            # Steering rewards/penalties
+            steering_reward = 0.0
+            side_dist_diff = left_dist - right_dist
+            side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
+            forward_dist_diff_norm = max(-1.0, min(1.0, (left_forward_dist - right_forward_dist)/10.0))
+            min_steering = -30.0*(np.pi/180.0)
+            max_steering = 30.0*(np.pi/180.0)
+            target_steering_angle = 0.0
+
+            if abs(side_dist_diff_norm) > center_tolerance:
+                alpha = min_steering + (side_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
+                beta = min_steering + (forward_dist_diff_norm + 1.0) * ((max_steering - min_steering) / 2.0)
+                target_steering_angle = 0.75*alpha + 0.25*beta
+
+            steering_err = steering_angle - target_steering_angle
+            steering_err_norm = 2*steering_err / (np.pi / 3)
+
+            side_error_factor = abs(side_dist_diff)
+            speed_factor = max(0.0, 0.1*speed)
+
+            if steering_power == -1:
+                steering_reward += 10.0*steering_err_norm*(side_error_factor + speed_factor)
+            elif steering_power == 0:
+                steering_reward += (20.0*speed_factor if abs(steering_err) < np.pi/90 else -20.0*speed_factor)
+            elif steering_power == 1:
+                steering_reward += -10.0*steering_err_norm*(side_error_factor + speed_factor)
+            else:
+                sim.print("Invalid steering power!")
+
+            if steering_reward > 0.0:
+                steering_reward += ch_s*checkpoint_reward
+            
+            # Engine rewards/penalties
+            engine_reward = 0.0
+            forward_side_diff = left_forward_dist - right_forward_dist
+            forward_side_sum = left_forward_dist + right_forward_dist
+            forward_side_dist = forward_dist
+
+            if left_forward_dist < right_forward_dist:
+                forward_side_dist = left_forward_dist
+            else:
+                forward_side_dist = right_forward_dist
+
+            projected_dist = forward_side_dist*np.cos(np.pi/6.0)
+            q = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
+            forward_dist_interp = (1 - q)*forward_dist + q*projected_dist
+
+            target_speed = 0.5*(forward_dist_interp)
+            target_speed = min(1.0, target_speed)
+            speed_err = speed - target_speed
+
+            side_error_factor = abs(side_dist_diff)
+            speed_factor = max(0.0, 0.1*speed)
+            steering_factor = abs(steering_angle)
+
+            if engine_power == -1.0:
+                engine_reward += (
+                    10.0*speed_err*(side_error_factor + steering_factor) 
+                    + (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                    + (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
+                )
+            elif engine_power == 0.0:
+                engine_reward += (10.0 if abs(speed_err) < 0.1 else -10.0)
+            elif engine_power == 1.0:
+                engine_reward += (
+                    -10.0*speed_err*(side_error_factor + steering_factor) 
+                    - (0.0 if speed > 1.0 else 30.0*(speed - 1.0))
+                    - (0.0 if speed < 10.0 else 10.0*(speed - 10.0))
+                )
+            else:
+                sim.print("Invalid engine or breaking power!")
+
+            if engine_reward > 0.0:
+                engine_reward += ch_e*checkpoint_reward
+
+            # Compute final reward
+            reward = ws*steering_reward + we*engine_reward
+            rewards_history.append(reward)
+
+        if terminated:
+            crash_penalty = 50 * (1.0 - (end_step / max_steps))
+            rewards_history[-1] -= crash_penalty
+
+        episode_reward = sum(rewards_history)
+
+        # Calculate expected value from rewards
+        # - At each timestep what was the total reward received after that timestep
+        # - Rewards in the past are discounted by multiplying them with gamma
+        # - These are the labels for our critic
+        returns = []
+        discounted_sum = 0
+        for r in rewards_history[::-1]:
+            discounted_sum = r + gamma * discounted_sum
+            returns.insert(0, discounted_sum)
+
+        # Normalize Returns
+        returns = np.array(returns, dtype=np.float32)
+        returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
+        returns_tf = tf.convert_to_tensor(returns, dtype=tf.float32)
+
+        # Normalize Diff
+        values_tf = tf.squeeze(critic_values)
+        diffs = returns_tf - values_tf      # shape (T,)
+        diffs = (diffs - tf.reduce_mean(diffs)) / (tf.math.reduce_std(diffs) + eps)
+        diffs = tf.clip_by_value(diffs, -2.0, 2.0)
+
+        # Compute loss
+        entropy = -tf.reduce_sum(action_probs * tf.math.log(action_probs + eps), axis=1)
+        entropy_loss = tf.reduce_mean(entropy)
+        base_entropy_coef = base_entropy_coef
+
+        # Actor + Critic losses
+        actor_losses = -tf.reduce_mean(action_probs_history * diffs)
+        critic_losses = tf.reduce_mean(huber_loss(returns_tf, values_tf))
+        loss_value = actor_losses + critic_losses - base_entropy_coef*entropy_loss
+
+        # Backpropagation
+        grads = tape.gradient(loss_value, model.trainable_variables)
+        grads = [tf.clip_by_norm(g, 0.5) if g is not None else None for g in grads]
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+        episode_count += 1
+        rewards_history = []
+        action_probs_history = []
+        critic_value_history = []
+
+        sim.print(f"episode_reward = ({episode_reward:.2f})")
+
