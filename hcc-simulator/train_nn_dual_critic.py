@@ -149,7 +149,8 @@ while episode_count < max_episodes:
                 progress = 100*(current_checkpoint/total_checkpoints)
 
                 if j == len(checkpoint_times) - 1 or end_step - steps_survived_after_checkpoint > step:
-                    checkpoint_reward = progress*(baseline_endstep - step)/baseline_endstep
+                    checkpoint_reward = progress*(max_steps - step)/max_steps
+                    checkpoint_reward = max(0.1*progress, checkpoint_reward)
 
                 # baseline_time = baseline_checkpoint_times[j]
                 # nn_time = checkpoint_times[j]
@@ -224,8 +225,8 @@ while episode_count < max_episodes:
             else:
                 sim.print("Invalid engine or breaking power!")
 
-            engine_rewards_history.append(engine_reward + checkpoint_reward)
-            steering_rewards_history.append(steering_reward + checkpoint_reward)
+            engine_rewards_history.append(engine_reward + ch_e*checkpoint_reward)
+            steering_rewards_history.append(steering_reward + ch_s*checkpoint_reward)
 
             # Compute final reward
             # reward += ws*steering_reward + we*engine_reward

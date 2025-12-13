@@ -212,8 +212,8 @@ impl IVehicleBody3D for AgentVehicleBody {
         let forward = global_transform.basis.col_c();
 
         self.base_mut().rotate_y(initial_rotation);
-        self.base_mut().set_steering(initial_steering);
-        self.base_mut().set_linear_velocity(forward*initial_speed);
+        // self.base_mut().set_steering(initial_steering);
+        // self.base_mut().set_linear_velocity(forward*initial_speed);
     }
 }
 
