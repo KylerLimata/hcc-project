@@ -184,6 +184,101 @@ class NNAgent:
 
         return [engine_power, steering_power, breaking_power]
     
+
+class NNAgentSingleActor:
+    def __init__(
+            self, 
+            model, 
+            num_actions: int,
+            breaking=False
+            ):
+        import tensorflow as tf
+        import numpy as np
+        # Upack model weights
+        # Weights evaluated with numpy for performance
+        layers = model.layers
+
+        self.hidden_layers = []
+        for layer in layers:
+            if isinstance(layer, tf.keras.layers.Dense) and "out" not in layer.name:
+                weights = layer.get_weights()
+                if len(weights) == 2:
+                    self.hidden_layers.append((weights[0], weights[1], layer.activation))
+
+        self.output_layers = []
+        for layer in layers:
+            if isinstance(layer, tf.keras.layers.Dense) and "out" in layer.name:
+                weights = layer.get_weights()
+                if len(weights) == 2:
+                    self.output_layers.append((weights[0], weights[1], layer.activation))
+        
+        self.num_actions = num_actions
+        self.state_history = []
+        self.action_history = []
+        self.breaking = breaking
+
+    def apply_activation(self, x, activation):
+        import tensorflow as tf
+        import numpy as np
+
+        if activation == tf.keras.activations.relu:
+            return np.maximum(0, x)
+        elif activation == tf.keras.activations.tanh:
+            return np.tanh(x)
+        elif activation == tf.keras.activations.sigmoid:
+            return 1 / (1 + np.exp(-x))
+        elif activation == tf.keras.activations.linear:
+            return x
+        elif activation == tf.keras.activations.softmax:
+            # Stable softmax
+            z = x - np.max(x, axis=-1, keepdims=True)
+            e = np.exp(z)
+            return e / np.sum(e, axis=-1, keepdims=True)
+        else:
+            raise NotImplementedError(f"Unsupported activation: {activation}")
+    
+    def eval(self, inputs: list[float], state: list[float]):
+        import numpy as np
+
+        # Unpack state vec
+        speed = state[0]
+
+        # Convert inputs and state into single numpy array
+        x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+        
+        # Forward pass through hidden layers
+        for W, b, activation in self.hidden_layers:
+            xprime = np.dot(x, W) + b
+            x = self.apply_activation(xprime, activation)
+        
+        # Forward pass through outputs
+        Y = []
+        for W, b, activation in self.output_layers:
+            yprime = np.dot(x, W) + b
+            y = self.apply_activation(yprime, activation)
+            Y.append(y[0])
+
+        action_probs = Y[0]
+        action = np.random.choice(self.num_actions, p=action_probs)
+        decoded = self.decode_action(action)
+        steering_power = decoded[0]
+        engine_power = decoded[1]
+
+        self.state_history.append(inputs + state)
+        self.action_history.append(action)
+
+        if speed < 0.5 and engine_power < 0.0:
+            # Hard prevent the agent from moving backwards
+            engine_power = 0.0
+
+        return [engine_power, steering_power, 0.0]
+    
+    def decode_action(self, action: int):
+        steering_power = action // 3 - 1
+        engine_power = action % 3 - 1
+
+        return (steering_power, engine_power)
+    
 class NNEngineAgent:
     def __init__(
             self, 
@@ -300,6 +395,125 @@ class NNEngineAgent:
         return [engine_power, steering_power]
 
 class NNSteeringAgent:
+    def __init__(
+            self, 
+            model, 
+            num_steering_actions: int
+            ):
+        import tensorflow as tf
+        import numpy as np
+        # Upack model weights
+        # Weights evaluated with numpy for performance
+        layers = model.layers
+
+        self.hidden_layers = []
+        for layer in layers:
+            if isinstance(layer, tf.keras.layers.Dense) and "out" not in layer.name:
+                weights = layer.get_weights()
+                if len(weights) == 2:
+                    self.hidden_layers.append((weights[0], weights[1], layer.activation))
+
+        self.output_layers = []
+        for layer in layers:
+            if isinstance(layer, tf.keras.layers.Dense) and "out" in layer.name:
+                weights = layer.get_weights()
+                if len(weights) == 2:
+                    self.output_layers.append((weights[0], weights[1], layer.activation))
+        
+        self.num_steering_actions = num_steering_actions
+        self.state_history = []
+        self.action_history = []
+
+    def apply_activation(self, x, activation):
+        import tensorflow as tf
+        import numpy as np
+
+        if activation == tf.keras.activations.relu:
+            return np.maximum(0, x)
+        elif activation == tf.keras.activations.tanh:
+            return np.tanh(x)
+        elif activation == tf.keras.activations.sigmoid:
+            return 1 / (1 + np.exp(-x))
+        elif activation == tf.keras.activations.linear:
+            return x
+        elif activation == tf.keras.activations.softmax:
+            # Stable softmax
+            z = x - np.max(x, axis=-1, keepdims=True)
+            e = np.exp(z)
+            return e / np.sum(e, axis=-1, keepdims=True)
+        else:
+            raise NotImplementedError(f"Unsupported activation: {activation}")
+    
+    def eval(self, inputs: list[float], state: list[float]):
+        import numpy as np
+
+        # Convert inputs and state into single numpy array
+        x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+        
+        # Forward pass through hidden layers
+        for W, b, activation in self.hidden_layers:
+            xprime = np.dot(x, W) + b
+            x = self.apply_activation(xprime, activation)
+        
+        # Forward pass through outputs
+        Y = []
+        for W, b, activation in self.output_layers:
+            yprime = np.dot(x, W) + b
+            y = self.apply_activation(yprime, activation)
+            Y.append(y[0])
+
+        steering_action_probs = Y[0]
+
+        # Sample actions
+        steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
+
+        # Update histories
+        self.state_history.append(inputs + state)
+        self.action_history.append(steering_action)
+
+        steering_power = 0.0
+
+        if steering_action == 0:
+            steering_power = -1.0
+        elif steering_action == 1:
+            steering_power = 0.0
+        else:
+            steering_power = 1.0
+
+
+        # Unpack input vec
+        left_forward_dist = inputs[1]
+        forward_dist = inputs[2]
+        right_forward_dist = inputs[3]
+        # Unpack state vec
+        speed = state[0]
+
+        forward_side_diff = left_forward_dist - right_forward_dist
+        forward_side_sum = left_forward_dist + right_forward_dist
+        forward_side_dist = forward_dist
+
+        if left_forward_dist < right_forward_dist:
+            forward_side_dist = left_forward_dist
+        else:
+            right_forward_dist = right_forward_dist
+
+        projected_dist = forward_side_dist*np.cos(np.pi/6.0)
+        w = min(max(forward_side_diff/forward_side_sum, 0.0), 1.0)
+        forward_dist_interp = (1 - w)*forward_dist + w*projected_dist
+
+        target_speed = 0.5*(forward_dist_interp)
+        speed_diff = speed - target_speed
+        engine_power = 0.0
+
+        if speed_diff < 1.0:
+            engine_power = 1.0
+        elif speed_diff > 1.0:
+            engine_power = -1.0
+
+        return [engine_power, steering_power]
+    
+
+class HybridSteeringAgent:
     def __init__(
             self, 
             model, 
