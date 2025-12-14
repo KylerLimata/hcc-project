@@ -607,8 +607,6 @@ class HybridSteeringAgent:
 
         # If the current step is a sampling step, update the target steering power
         if self.step_count % self.n_sample_steps == 0:
-            self.integral = 0.0
-
             if steering_action == 0:
                 self.target_steering_power = -5.0
             elif steering_action == 1:

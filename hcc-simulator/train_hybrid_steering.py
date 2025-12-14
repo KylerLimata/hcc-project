@@ -24,7 +24,7 @@ Kp = 16.977 # Proportional gain
 Ki = 6.791 # Integral gain
 Kd = 10.61 # Derivative gain
 dt = 1.0/steps_per_second # dt per time step
-sample_period = 10 # Sample NN every x steps
+sample_period = 30 # Sample NN every x steps
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
