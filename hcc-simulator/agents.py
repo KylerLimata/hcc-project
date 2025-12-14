@@ -610,16 +610,16 @@ class HybridSteeringAgent:
             self.integral = 0.0
 
             if steering_action == 0:
-                self.target_steering_power = -1.0
+                self.target_steering_power = -5.0
             elif steering_action == 1:
                 self.target_steering_power = 0.0
             else:
-                self.target_steering_power = 1.0
+                self.target_steering_power = 5.0
 
         # Compute PID output
         error = self.target_steering_power - self.steering_power
         self.integral += error*self.dt
-        self.integral = np.clip(self.integral, -10.0, 10.0)  # keep integral from exploding
+        self.integral = np.clip(self.integral, -5.0, 5.0)  # keep integral from exploding
         derivative = (error - self.prev_error)/self.dt
 
         self.steering_power = (
@@ -627,6 +627,7 @@ class HybridSteeringAgent:
             + self.Ki*self.integral
             + self.Kd*derivative
         )
+        self.steering_power = np.clip(self.steering_power, -5.0, 5.0)
 
         assert not math.isnan(self.target_steering_power), "The number must not be NaN"
 
