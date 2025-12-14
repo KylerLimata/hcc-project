@@ -20,9 +20,9 @@ last_end_step = 0
 base_entropy_coef = 0.1      # increase if too weak later
 
 ## PID parameters (see 'controller_design.py')
-Kp = 16.977 # Proportional gain
-Ki = 6.791 # Integral gain
-Kd = 10.61 # Derivative gain
+Kp = 1.145 # Proportional gain
+Ki = 0.071 # Integral gain
+Kd = 7.074 # Derivative gain
 dt = 1.0/steps_per_second # dt per time step
 sample_period = 30 # Sample NN every x steps
     

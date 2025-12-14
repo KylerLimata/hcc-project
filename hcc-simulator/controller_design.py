@@ -144,9 +144,14 @@ plt.legend()
 plt.show()
 
 ## This doesn't help much, so lets' tweak the zeros and gain directly
-K3 = 0.75
-zD3 = -0.8
-zI3 = -0.8
+## Update: As it turns out, the originally designed controller caused
+## To much instability, so we will redesign with a slower response
+# K3 = 0.75
+# zD3 = -0.8
+# zI3 = -0.8
+K3 = 0.5
+zD3 = -0.1
+zI3 = -0.1
 C_D_sans3 = ctrl.zpk([zD3], [], 1)
 C_I_sans3 = ctrl.zpk([zI3], [0], 1)
 G_PID3 = ctrl.feedback(K1*K2*K3*C_I_sans3*C_D_sans3*G,1)
@@ -182,3 +187,4 @@ Ki = num[2]
 
 print(f"Kp = {Kp:.3f}, Ki = {Ki:.3f}, Kd = {Kd:.3f}")
 # Kp = 16.977, Ki = 6.791, Kd = 10.61
+# New: Kp = 1.415, Ki = 0.071, Kd = 7.04
