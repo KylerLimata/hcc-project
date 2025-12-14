@@ -517,7 +517,8 @@ class HybridSteeringAgent:
     def __init__(
             self, 
             model, 
-            num_steering_actions: int
+            num_steering_actions: int,
+            Kp, Ki, Kd, Ts, n_sample_steps, dt
             ):
         import tensorflow as tf
         import numpy as np
@@ -543,6 +544,18 @@ class HybridSteeringAgent:
         self.state_history = []
         self.action_history = []
 
+        # PID
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.n_sample_steps = n_sample_steps
+        self.dt = dt
+        self.target_steering_power = 0.0
+        self.integral = 0.0
+        self.prev_error = 0.0
+        self.steering_power = 0.0
+        self.step_count = 0
+
     def apply_activation(self, x, activation):
         import tensorflow as tf
         import numpy as np
@@ -566,39 +579,51 @@ class HybridSteeringAgent:
     def eval(self, inputs: list[float], state: list[float]):
         import numpy as np
 
-        # Convert inputs and state into single numpy array
-        x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
-        
-        # Forward pass through hidden layers
-        for W, b, activation in self.hidden_layers:
-            xprime = np.dot(x, W) + b
-            x = self.apply_activation(xprime, activation)
-        
-        # Forward pass through outputs
-        Y = []
-        for W, b, activation in self.output_layers:
-            yprime = np.dot(x, W) + b
-            y = self.apply_activation(yprime, activation)
-            Y.append(y[0])
+        # If the current step is a sampling step, sample the neural network
+        if self.step_count % self.n_sample_steps == 0:
+            pass
 
-        steering_action_probs = Y[0]
+            # Convert inputs and state into single numpy array
+            x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+            
+            # Forward pass through hidden layers
+            for W, b, activation in self.hidden_layers:
+                xprime = np.dot(x, W) + b
+                x = self.apply_activation(xprime, activation)
+            
+            # Forward pass through outputs
+            Y = []
+            for W, b, activation in self.output_layers:
+                yprime = np.dot(x, W) + b
+                y = self.apply_activation(yprime, activation)
+                Y.append(y[0])
 
-        # Sample actions
-        steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
+            steering_action_probs = Y[0]
 
-        # Update histories
-        self.state_history.append(inputs + state)
-        self.action_history.append(steering_action)
+            # Sample actions
+            steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
 
-        steering_power = 0.0
+            # Update histories
+            self.state_history.append(inputs + state)
+            self.action_history.append(steering_action)
 
-        if steering_action == 0:
-            steering_power = -1.0
-        elif steering_action == 1:
-            steering_power = 0.0
-        else:
-            steering_power = 1.0
+            if steering_action == 0:
+                self.target_steering_power = -1.0
+            elif steering_action == 1:
+                self.target_steering_power = 0.0
+            else:
+                self.target_steering_power = 1.0
 
+        # Compute PID output
+        error = self.target_steering_power - self.steering_power
+        self.integral += error*self.dt
+        derivative = (error - self.prev_error)/self.dt
+
+        self.steering_power = (
+            self.Kp*error
+            + self.Ki*self.integral
+            + self.Kd*derivative
+        )
 
         # Unpack input vec
         left_forward_dist = inputs[1]
@@ -629,5 +654,5 @@ class HybridSteeringAgent:
         elif speed_diff > 1.0:
             engine_power = -1.0
 
-        return [engine_power, steering_power]
+        return [engine_power, self.steering_power]
     
