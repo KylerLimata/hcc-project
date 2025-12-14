@@ -371,11 +371,11 @@ class NNEngineAgent:
         steering_power = 0.0
 
         if engine_action == 0:
-            engine_power = -1.0
+            engine_power = -5.0
         elif engine_action == 1:
             engine_power = 0.0
         else:
-            engine_power = 1.0
+            engine_power = 5.0
 
         forward_side_diff = left_forward_dist - right_forward_dist
         side_dist_diff_norm = max(-1.0, min(1.0, (left_dist - right_dist)/10.0))
@@ -518,7 +518,7 @@ class HybridSteeringAgent:
             self, 
             model, 
             num_steering_actions: int,
-            Kp, Ki, Kd, Ts, n_sample_steps, dt
+            Kp, Ki, Kd, sample_period, dt
             ):
         import tensorflow as tf
         import numpy as np
@@ -548,7 +548,7 @@ class HybridSteeringAgent:
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
-        self.n_sample_steps = n_sample_steps
+        self.n_sample_steps = sample_period
         self.dt = dt
         self.target_steering_power = 0.0
         self.integral = 0.0
@@ -577,35 +577,37 @@ class HybridSteeringAgent:
             raise NotImplementedError(f"Unsupported activation: {activation}")
     
     def eval(self, inputs: list[float], state: list[float]):
+        import math
         import numpy as np
 
-        # If the current step is a sampling step, sample the neural network
-        if self.step_count % self.n_sample_steps == 0:
-            pass
-
-            # Convert inputs and state into single numpy array
-            x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+        # Convert inputs and state into single numpy array
+        x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+        x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6) # Sanitize inputs
             
-            # Forward pass through hidden layers
-            for W, b, activation in self.hidden_layers:
+        # Forward pass through hidden layers
+        for W, b, activation in self.hidden_layers:
                 xprime = np.dot(x, W) + b
                 x = self.apply_activation(xprime, activation)
             
-            # Forward pass through outputs
-            Y = []
-            for W, b, activation in self.output_layers:
-                yprime = np.dot(x, W) + b
-                y = self.apply_activation(yprime, activation)
-                Y.append(y[0])
+        # Forward pass through outputs
+        Y = []
+        for W, b, activation in self.output_layers:
+            yprime = np.dot(x, W) + b
+            y = self.apply_activation(yprime, activation)
+            Y.append(y[0])
 
-            steering_action_probs = Y[0]
+        steering_action_probs = Y[0]
 
-            # Sample actions
-            steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
+        # Sample actions
+        steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
 
-            # Update histories
-            self.state_history.append(inputs + state)
-            self.action_history.append(steering_action)
+        # Update histories
+        self.state_history.append(inputs + state)
+        self.action_history.append(steering_action)
+
+        # If the current step is a sampling step, update the target steering power
+        if self.step_count % self.n_sample_steps == 0:
+            self.integral = 0.0
 
             if steering_action == 0:
                 self.target_steering_power = -1.0
@@ -617,6 +619,7 @@ class HybridSteeringAgent:
         # Compute PID output
         error = self.target_steering_power - self.steering_power
         self.integral += error*self.dt
+        self.integral = np.clip(self.integral, -10.0, 10.0)  # keep integral from exploding
         derivative = (error - self.prev_error)/self.dt
 
         self.steering_power = (
@@ -624,6 +627,8 @@ class HybridSteeringAgent:
             + self.Ki*self.integral
             + self.Kd*derivative
         )
+
+        assert not math.isnan(self.target_steering_power), "The number must not be NaN"
 
         # Unpack input vec
         left_forward_dist = inputs[1]
@@ -653,6 +658,9 @@ class HybridSteeringAgent:
             engine_power = 1.0
         elif speed_diff > 1.0:
             engine_power = -1.0
+
+        self.step_count += 1
+        self.prev_error = error
 
         return [engine_power, self.steering_power]
     
