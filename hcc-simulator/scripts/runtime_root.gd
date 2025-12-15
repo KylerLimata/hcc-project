@@ -10,6 +10,7 @@ var end_step: int = 0
 var checkpoint_times: Array[int] = []
 var terminated: bool = false
 var finished: bool = false
+var succeeded: bool = false
 
 func load_environment(env_name: String):
 	if current_environment != null:
@@ -50,7 +51,7 @@ func _physics_process(_delta: float) -> void:
 				current_step += 1
 		
 		if finished:
-			emit_signal("complete_episode", checkpoint_times, terminated, current_step)
+			emit_signal("complete_episode", checkpoint_times, succeeded, terminated, current_step)
 			current_environment.remove_child(current_agent_node)
 			current_agent_node.queue_free()
 			current_agent_node = null
@@ -66,6 +67,7 @@ func on_checkpoint_activated(final: bool):
 	
 	if final:
 		finished = true
+		succeeded = true
 
 func on_agent_collide():
 	terminated = true

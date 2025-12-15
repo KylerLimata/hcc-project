@@ -116,11 +116,11 @@ impl PythonScriptRunner {
     }
 
     #[func]
-    fn complete_episode(&mut self, checkpoint_times: Array<i64>, terminated: bool, end_step: i64) {
+    fn complete_episode(&mut self, checkpoint_times: Array<i64>, succeeded: bool, terminated: bool, end_step: i64) {
         match &mut self.episode_handle {
             None => godot_error!("Attempted to return episode result when no episode is running."),
             Some(handle) => {
-                handle.set_result((checkpoint_times.iter_shared().collect(), terminated, end_step))
+                handle.set_result((checkpoint_times.iter_shared().collect(), succeeded, terminated, end_step))
             }
         }
     }
@@ -297,7 +297,7 @@ impl SimulationRunner {
 #[pyclass]
 #[derive(Clone)]
 pub struct EpisodeHandle {
-    inner: Arc<(Mutex<Option<(Vec<i64>, bool, i64)>>, Condvar)>,
+    inner: Arc<(Mutex<Option<(Vec<i64>, bool, bool, i64)>>, Condvar)>,
 }
 
 #[pymethods]
@@ -314,14 +314,14 @@ impl EpisodeHandle {
         lock.lock().unwrap().is_some()
     }
 
-    fn set_result(&self, value: (Vec<i64>, bool, i64)) {
+    fn set_result(&self, value: (Vec<i64>, bool, bool, i64)) {
         let (lock, cvar) = &*self.inner;
         let mut guard = lock.lock().unwrap();
         *guard = Some(value);
         cvar.notify_all();
     }
 
-    fn get_result(&self) -> PyResult<(Vec<i64>, bool, i64)> {
+    fn get_result(&self) -> PyResult<(Vec<i64>, bool, bool, i64)> {
         let (lock, cvar) = &*self.inner;
         let mut guard = lock.lock().unwrap();
         while guard.is_none() {

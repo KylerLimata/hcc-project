@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bf2ri6mximmx7"
+
+[deps]
+
+files=["res://training_metrics_nn_steering.episode.translation", "res://training_metrics_nn_steering.episode.translation", "res://training_metrics_nn_steering.success.translation"]
+
+source_file="res://training_metrics_nn_steering.csv"
+dest_files=["res://training_metrics_nn_steering.episode.translation", "res://training_metrics_nn_steering.episode.translation", "res://training_metrics_nn_steering.success.translation"]
+
+[params]
+
+compress=true
+delimiter=0
