@@ -4,6 +4,7 @@ from keras import ops
 from keras import layers
 import tensorflow as tf
 import agents
+import pandas as pd
 
 # Configuration parameters for the whole setup
 seed = 42
@@ -11,7 +12,7 @@ gamma = 0.8  # Discount factor for past rewards
 max_seconds_per_episode = 60
 steps_per_second = 60
 max_steps = max_seconds_per_episode*steps_per_second
-max_episodes = 2000
+max_episodes = 500
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 ## Entropy parameters
