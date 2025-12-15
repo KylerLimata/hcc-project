@@ -113,10 +113,6 @@ while episode_count < max_episodes and training_completion_countdown > 0:
             # State
             speed = state[5]
             steering_angle = state[6]
-
-            # Track previous side error for progress reward
-            if step == 0:
-                prev_side_error = abs(left_dist - right_dist)
             
             # Action
             steering_action = action
@@ -173,11 +169,6 @@ while episode_count < max_episodes and training_completion_countdown > 0:
                 reward += -10.0*steering_err_norm*(side_error_factor + speed_factor)
             else:
                 sim.print("Invalid steering power!")
-            
-            # side_progress = (prev_side_error - side_error)
-            # side_progress = float(np.clip(side_progress, -0.05, 0.05))
-            # reward += 0.2 * side_progress
-            # prev_side_error = side_error
 
             # Debugging
             # if step % 10 == 0:
