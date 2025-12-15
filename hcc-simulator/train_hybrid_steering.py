@@ -11,7 +11,7 @@ gamma = 0.8  # Discount factor for past rewards
 max_seconds_per_episode = 60
 steps_per_second = 60
 max_steps = max_seconds_per_episode*steps_per_second
-max_episodes = 1000
+max_episodes = 2000
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 ## Entropy parameters
@@ -24,7 +24,7 @@ Kp = 1.145 # Proportional gain
 Ki = 0.071 # Integral gain
 Kd = 7.074 # Derivative gain
 dt = 1.0/steps_per_second # dt per time step
-sample_period = 30 # Sample NN every x steps
+sample_period = 5 # Sample NN every x steps
     
 # Load baseline checkpoint times
 baseline_checkpoint_times = np.load('baseline_checkpoint_times.npy')
@@ -157,6 +157,8 @@ while episode_count < max_episodes:
                 reward += -10.0*steering_err_norm*(side_error_factor + speed_factor)
             else:
                 sim.print("Invalid steering power!")
+
+            reward *= sample_period
             
             # side_progress = (prev_side_error - side_error)
             # side_progress = float(np.clip(side_progress, -0.05, 0.05))
