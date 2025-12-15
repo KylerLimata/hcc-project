@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ce2vk55nip6h4"
+
+[deps]
+
+files=["res://training_summary_hybrid_steering.total.translation"]
+
+source_file="res://training_summary_hybrid_steering.csv"
+dest_files=["res://training_summary_hybrid_steering.total.translation"]
+
+[params]
+
+compress=true
+delimiter=0
