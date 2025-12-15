@@ -580,33 +580,33 @@ class HybridSteeringAgent:
         import math
         import numpy as np
 
-        # Convert inputs and state into single numpy array
-        x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
-        x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6) # Sanitize inputs
-            
-        # Forward pass through hidden layers
-        for W, b, activation in self.hidden_layers:
-                xprime = np.dot(x, W) + b
-                x = self.apply_activation(xprime, activation)
-            
-        # Forward pass through outputs
-        Y = []
-        for W, b, activation in self.output_layers:
-            yprime = np.dot(x, W) + b
-            y = self.apply_activation(yprime, activation)
-            Y.append(y[0])
-
-        steering_action_probs = Y[0]
-
-        # Sample actions
-        steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
-
-        # Update histories
-        self.state_history.append(inputs + state)
-        self.action_history.append(steering_action)
-
         # If the current step is a sampling step, update the target steering power
         if self.step_count % self.n_sample_steps == 0:
+            # Convert inputs and state into single numpy array
+            x = np.array(inputs + state, dtype=np.float32).reshape(1, -1)
+            x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6) # Sanitize inputs
+                
+            # Forward pass through hidden layers
+            for W, b, activation in self.hidden_layers:
+                    xprime = np.dot(x, W) + b
+                    x = self.apply_activation(xprime, activation)
+                
+            # Forward pass through outputs
+            Y = []
+            for W, b, activation in self.output_layers:
+                yprime = np.dot(x, W) + b
+                y = self.apply_activation(yprime, activation)
+                Y.append(y[0])
+
+            steering_action_probs = Y[0]
+
+            # Sample actions
+            steering_action = np.random.choice(self.num_steering_actions, p=steering_action_probs)
+
+            # Update histories
+            self.state_history.append(inputs + state)
+            self.action_history.append(steering_action)
+        
             if steering_action == 0:
                 self.target_steering_power = -5.0
             elif steering_action == 1:

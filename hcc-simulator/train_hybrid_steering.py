@@ -17,7 +17,11 @@ eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 
 ## Entropy parameters
 stagnation_count = 0
 last_end_step = 0
-base_entropy_coef = 0.1      # increase if too weak later
+base_entropy_coef = 0.1
+
+## Early training ending
+n_improvement_steps = 20 # If it can improve a successful episode by this many steps, it does not terminate early
+n_final_episodes = 50 # How many successful episodes of non-improvement before terminating early
 
 ## PID parameters (see 'controller_design.py')
 Kp = 1.145 # Proportional gain
@@ -50,9 +54,16 @@ huber_loss = keras.losses.Huber()
 engine_action_probs_history = []
 critic_value_history = []
 rewards_history = []
+episode_rewards_history = []
+episode_length_history = []
+episode_results_history = []
 episode_count = 0
+total_training_time = 0
+fastest_time = max_steps
+training_completion_countdown = n_improvement_steps
+has_succeeded_once = False
 
-while episode_count < max_episodes:
+while episode_count < max_episodes and training_completion_countdown > 0:
     sim.load_environment("training_environment_new")
 
     episode_reward = 0
@@ -67,9 +78,22 @@ while episode_count < max_episodes:
             break
 
     # Upack results
-    checkpoint_times, terminated, end_step = handle.get_result()
+    checkpoint_times, succeeded, terminated, end_step = handle.get_result()
     state_history = agent.state_history
     action_history = agent.action_history
+    episode_length_history.append(end_step)
+    episode_results_history.append((1 if succeeded else 0))
+    total_training_time += end_step
+
+    if has_succeeded_once:
+        training_completion_countdown -= 1
+
+    if succeeded:
+        has_succeeded_once = True
+
+        if end_step < fastest_time - n_improvement_steps:
+            fastest_time = end_step
+            training_completion_countdown = n_improvement_steps
 
     sim.print(f" Completed in {end_step} steps")
 
@@ -218,5 +242,27 @@ while episode_count < max_episodes:
         episode_count += 1
         rewards_history = []
 
+        episode_rewards_history.append(episode_reward)
+
         sim.print(f"episode_reward = ({episode_reward:.2f})")
     
+sim.print(f"training completed, saving training data. has_succeeded_once = {has_succeeded_once}")
+
+df = pd.DataFrame({
+    "episode": range(len(episode_rewards_history)),
+    "episode_reward": episode_rewards_history,
+    "episode_time": episode_length_history,
+    "success": episode_results_history
+})
+
+df.to_csv("training_metrics_hybrid_steering.csv", index=False)
+
+# Save summary info
+summary_df = pd.DataFrame({
+    "total_episodes": [len(df)],
+    "total_training_time": [total_training_time]
+})
+
+summary_df.to_csv("training_summary_hybrid_steering.csv", index=False)
+
+model.save("hybrid_steering_model.keras")
